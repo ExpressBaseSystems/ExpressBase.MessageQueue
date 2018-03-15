@@ -2,6 +2,7 @@
 using ExpressBase.Common.Constants;
 using ExpressBase.Common.EbServiceStack.ReqNRes;
 using ExpressBase.Common.ServiceClients;
+using ExpressBase.Common.ServiceStack.Auth;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using Funq;
 using Microsoft.AspNetCore.Builder;
@@ -72,27 +73,14 @@ namespace ExpressBase.MessageQueue
         {
             LogManager.LogFactory = new ConsoleLogFactory(debugEnabled: true);
 
-            var jwtprovider = new JwtAuthProvider
+            var jwtprovider = new JwtAuthProviderReader
             {
                 HashAlgorithm = "RS256",
-                PrivateKeyXml = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_JWT_PRIVATE_KEY_XML),
                 PublicKeyXml = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_JWT_PUBLIC_KEY_XML),
 #if (DEBUG)
                 RequireSecureConnection = false,
                 //EncryptPayload = true,
 #endif
-                CreatePayloadFilter = (payload, session) =>
-                {
-                    payload["sub"] = (session as CustomUserSession).UserAuthId;
-                    payload["cid"] = (session as CustomUserSession).CId;
-                    payload["uid"] = (session as CustomUserSession).Uid.ToString();
-                    payload["wc"] = (session as CustomUserSession).WhichConsole;
-                },
-
-                ExpireTokensIn = TimeSpan.FromHours(5),
-                ExpireRefreshTokensIn = TimeSpan.FromHours(8),
-                PersistSession = true,
-                SessionExpiry = TimeSpan.FromHours(12)
             };
 
             this.Plugins.Add(new AuthFeature(() => new CustomUserSession(),
