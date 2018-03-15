@@ -1,8 +1,7 @@
 ﻿using ExpressBase.Common;
 using ExpressBase.Common.Constants;
-using ExpressBase.Common.EbServiceStack.ReqNRes;    
+using ExpressBase.Common.EbServiceStack.ReqNRes;
 using ExpressBase.Common.ServiceClients;
-using ExpressBase.MessageQueue.MQServices;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using Funq;
 using Microsoft.AspNetCore.Builder;
@@ -12,7 +11,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using ServiceStack;
 using ServiceStack.Auth;
-using ServiceStack.Discovery.Redis;
 using ServiceStack.Logging;
 using ServiceStack.Messaging;
 using ServiceStack.RabbitMq;
@@ -117,13 +115,6 @@ namespace ExpressBase.MessageQueue
 
             container.Register<IEbServerEventClient>(c => new EbServerEventClient(c)).ReusedWithin(ReuseScope.Request);
 
-            SetConfig(new HostConfig
-            {
-                WebHostUrl = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_MQ_URL)
-            });
-
-            Plugins.Add(new RedisServiceDiscoveryFeature());
-
             RabbitMqMessageFactory rabitFactory = new RabbitMqMessageFactory();
             rabitFactory.ConnectionFactory.UserName = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_RABBIT_USER);
             rabitFactory.ConnectionFactory.Password = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_RABBIT_PASSWORD);
@@ -133,11 +124,11 @@ namespace ExpressBase.MessageQueue
 
             var mqServer = new RabbitMqServer(rabitFactory);
             mqServer.RetryCount = 1;
+            mqServer.RegisterHandler<RefreshSolutionConnectionsRequest>(base.ExecuteMessage);
+            mqServer.RegisterHandler<UploadFileRequest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<EmailServicesMqRequest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<SMSSentMqRequest>(base.ExecuteMessage);
-            mqServer.RegisterHandler<RefreshSolutionConnectionsRequest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<SMSStatusLogMqRequest>(base.ExecuteMessage);
-            mqServer.RegisterHandler<UploadFileRequest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<ImageResizeMqRequest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<FileMetaPersistMqRequest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<SlackPostMqRequest>(base.ExecuteMessage);
