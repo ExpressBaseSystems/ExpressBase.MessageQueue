@@ -1,10 +1,10 @@
 using ExpressBase.Common;
 using ExpressBase.Common.Data;
 using ExpressBase.Common.EbServiceStack.ReqNRes;
+using ExpressBase.Common.ServerEvents_Artifacts;
 using ExpressBase.Common.ServiceClients;
 using ExpressBase.Common.Structures;
 using ExpressBase.MessageQueue.Services;
-using ExpressBase.Common.ServerEvents_Artifacts;
 using ServiceStack;
 using ServiceStack.Messaging;
 using System;
@@ -17,70 +17,16 @@ using System.Runtime.Serialization;
 
 namespace ExpressBase.MessageQueue.MQServices
 {
-    [DataContract]
-    public class DeleteFileRequest : EbServiceStackRequest
-    {
-        [DataMember(Order = 1)]
-        public FileMeta FileDetails { get; set; }
-    }
-
-    [DataContract]
-    public class UploadFileRequestTest : EbServiceStackRequest
-    {
-        [DataMember(Order = 1)]
-        public FileMeta FileDetails { get; set; }
-
-        [DataMember(Order = 2)]
-        public byte[] FileByte { get; set; }
-
-        [DataMember(Order = 3)]
-        public string BucketName { get; set; }
-
-        [DataMember(Order = 4)]
-        public string Token { get; set; }
-    }
-
-    [DataContract]
-    public class ImageResizeRequest : EbServiceStackRequest
-    {
-        [DataMember(Order = 1)]
-        public FileMeta ImageInfo { get; set; }
-
-        [DataMember(Order = 2)]
-        public byte[] ImageByte { get; set; }
-
-    }
-
-    [DataContract]
-    public class FileMetaPersistRequest : EbServiceStackRequest
-    {
-        [DataMember(Order = 1)]
-        public FileMeta FileDetails { get; set; }
-
-        [DataMember(Order = 2)]
-        public string BucketName { get; set; }
-    }
-
     public class FileService : BaseService
     {
         public FileService(IMessageProducer _mqp, IMessageQueueClient _mqc) : base(_mqp, _mqc) { }
 
         [Authenticate]
-        public string Post(UploadFileMqRequest request)
+        public bool Any(UploadFileMqRequest request)
         {
-            string bucketName = "files";
-
-            if (Enum.IsDefined(typeof(ImageTypes), request.FileDetails.FileType.ToString()))
-            {
-                bucketName = "images_original";
-                if (request.FileDetails.FileName.StartsWith("dp"))
-                {
-                    bucketName = "dp_images";
-                }
-            }
             try
             {
-                this.MessageProducer3.Publish(new UploadFileRequestTest
+                this.MessageProducer3.Publish(new UploadFileRequest
                 {
                     FileDetails = new FileMeta
                     {
@@ -91,54 +37,21 @@ namespace ExpressBase.MessageQueue.MQServices
                         Length = request.FileDetails.Length
                     },
                     FileByte = request.FileByte,
-                    BucketName = bucketName,
-                    TenantAccountId = request.TenantAccountId,
-                    UserId = request.UserId
-                });
-
-                return "Successfully Uploaded to MQ";
-            }
-            catch (Exception e)
-            {
-                Log.Info("Exception:" + e.ToString());
-
-                return "Failed to Uplaod to MQ";
-            }
-        }
-
-        [Authenticate]
-        public string Any(UploadImageMqRequest request)
-        {
-            Log.Info("Inside Upload Img Service");
-            string bucketName = "images_original";
-            if (request.ImageInfo.FileName.StartsWith("dp"))
-                bucketName = "dp_images";
-
-            try
-            {
-                this.MessageProducer3.Publish(new UploadFileRequestTest
-                {
-                    FileDetails = new FileMeta
-                    {
-                        FileName = request.ImageInfo.FileName,
-                        MetaDataDictionary = (request.ImageInfo.MetaDataDictionary != null) ?
-                        request.ImageInfo.MetaDataDictionary :
-                        new Dictionary<String, List<string>>() { },
-                    },
-                    FileByte = request.ImageByte,
-                    BucketName = bucketName,
+                    BucketName = request.BucketName,
                     TenantAccountId = request.TenantAccountId,
                     UserId = request.UserId,
                     UserAuthId = request.UserAuthId,
-                    Token = this.Request.Authorization
+                    Token = this.Request.Authorization.Replace("Bearer", string.Empty).Trim()
+
                 });
-                return "Successfully Uploaded to MQ";
             }
             catch (Exception e)
             {
                 Log.Info("Exception:" + e.ToString());
-                return "Failed to Uplaod to MQ";
+
+                return false;
             }
+            return true;
         }
 
         [Authenticate]
@@ -153,8 +66,6 @@ namespace ExpressBase.MessageQueue.MQServices
                 }
             });
         }
-
-
     }
 
     [Restrict(InternalOnly = true)]
@@ -162,7 +73,7 @@ namespace ExpressBase.MessageQueue.MQServices
     {
         public FileServiceInternal(IMessageProducer _mqp, IMessageQueueClient _mqc, IEbServerEventClient _sec) : base(_mqp, _mqc, _sec) { }
 
-        public string Post(UploadFileRequestTest request)
+        public string Post(UploadFileRequest request)
         {
             Log.Info("Inside Upload Img MQ Service");
 
@@ -227,7 +138,7 @@ namespace ExpressBase.MessageQueue.MQServices
 
         public string Post(ImageResizeRequest request)
         {
-            UploadFileRequestTest uploadFileRequest = new UploadFileRequestTest();
+            UploadFileRequest uploadFileRequest = new UploadFileRequest();
             uploadFileRequest.TenantAccountId = request.TenantAccountId;
             uploadFileRequest.UserId = request.UserId;
 

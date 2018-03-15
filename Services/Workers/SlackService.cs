@@ -1,58 +1,111 @@
 ﻿using ExpressBase.Common;
 using ExpressBase.Common.Data;
+using ExpressBase.Common.EbServiceStack.ReqNRes;
 using ExpressBase.Common.Structures;
 using ExpressBase.MessageQueue.Services;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using Newtonsoft.Json;
 using RestSharp;
 using ServiceStack;
+using ServiceStack.Messaging;
 using System;
 using System.Data.Common;
 
 namespace ExpressBase.MessageQueue.MQServices
 {
-    [Restrict(InternalOnly = true)]
-        public class SlackServiceInternal : BaseService
+    
+    public class SlackService : BaseService
+    {
+        public SlackService(IMessageProducer _mqp) : base(_mqp) { }
+
+        [Authenticate]
+        public bool Post(SlackPostAsyncRequest request)
         {
-            public string Post(SlackAuthMqRequest req)
+            try
             {
-                EbConnectionFactory dbFactory = new EbConnectionFactory(req.TenantAccountId, this.Redis);
+                this.MessageProducer3.Publish(new SlackPostRequest { Payload = request.Payload, PostType = request.PostType, TenantAccountId = request.TenantAccountId, UserId = request.UserId });
+            }
+            catch (Exception e)
+            {
+                Log.Info("Exception: "+ e.Message.ToString());
+                return false;
+            }
+            return true;
+        }
 
-                if (req.IsNew)
+        [Authenticate]
+        public bool Post(SlackAuthAsyncRequest request)
+        {
+            try
+            {
+                this.MessageProducer3.Publish(new SlackAuthRequest { IsNew = request.IsNew, SlackJson = request.SlackJson, TenantAccountId = request.TenantAccountId, UserId = request.UserId });
+            }
+            catch (Exception e)
+            {
+                Log.Info("Exception: "+ e.Message.ToString());
+                return false;
+            }
+            return true;
+        }
+    }
+
+    [Restrict(InternalOnly = true)]
+    public class SlackServiceInternal : BaseService
+    {
+        public SlackServiceInternal()
+        {
+
+        }
+
+        public bool Post(SlackAuthRequest req)
+        {
+            EbConnectionFactory dbFactory = new EbConnectionFactory(req.TenantAccountId, this.Redis);
+
+            if (req.IsNew)
+            {
+                try
                 {
-                    try
-                    {
-                        string sql = "UPDATE eb_users SET slackjson = @slackjson WHERE id = @id RETURNING id";
+                    string sql = "UPDATE eb_users SET slackjson = @slackjson WHERE id = @id RETURNING id";
 
-                        var id = dbFactory.DataDB.DoQuery<Int32>(sql, new DbParameter[] {
+                    var id = dbFactory.DataDB.DoQuery<Int32>(sql, new DbParameter[] {
                             dbFactory.DataDB.GetNewParameter("slackjson", EbDbTypes.Json,EbSerializers.Json_Serialize(req.SlackJson)),
                             dbFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, req.UserId)
                         });
-                    }
-                    catch (Exception e)
-                    {
-                        return null;
-                    }
                 }
-                else
+                catch (Exception e)
                 {
+                    return false;
                 }
-                return null;
             }
-
-            public string Post(SlackPostMqRequest req)
+            else
             {
-                EbConnectionFactory dbFactory = new EbConnectionFactory(req.TenantAccountId, this.Redis);
+                throw new NotImplementedException();
+            }
+            return true;
+        }
 
-                string sql = "SELECT slackjson FROM eb_users WHERE id = @id";
-                
-                var dt = dbFactory.DataDB.DoQuery(sql, new DbParameter[] { dbFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, req.UserId) });
+        public bool Post(SlackPostRequest req)
+        {
+            string sql = "SELECT slackjson FROM eb_users WHERE id = @id";
+
+            EbConnectionFactory dbFactory = new EbConnectionFactory(req.TenantAccountId, this.Redis);
+
+            try
+            {
+                var dt = dbFactory.DataDB.DoQuery(sql,
+                    new DbParameter[]
+                    {
+                        dbFactory.DataDB.GetNewParameter("id", EbDbTypes.Int32, req.UserId)
+                    });
+
                 var json = dt.Rows[0][0];
+
                 SlackJson slackJson = JsonConvert.DeserializeObject<SlackJson>(json.ToString());
 
                 var client = new RestClient("https://slack.com");
 
-                if (req.PostType == 1) {
+                if (req.PostType == 1)
+                {
                     var request = new RestRequest("api/files.upload", Method.POST);
 
                     request.AddParameter("token", slackJson.AccessToken);
@@ -83,22 +136,27 @@ namespace ExpressBase.MessageQueue.MQServices
                     //Execute the request
                     var res = client.ExecuteAsyncPost(request, SlackCallBack, "POST");
                 }
-
-                return null;
-            }
-
-            private void AuthRes(IRestResponse arg1, RestRequestAsyncHandle arg2)
+            }catch(Exception e)
             {
-
+                Log.Info("Exception: " + e.Message.ToString());
+                return false;
             }
 
-            private void SlackCallBack(IRestResponse arg1, RestRequestAsyncHandle arg2)
-            {
-                //log response...
-                //throw new NotImplementedException();
-            }
+            return true;
+        }
+
+        private void AuthRes(IRestResponse arg1, RestRequestAsyncHandle arg2)
+        {
+
+        }
+
+        private void SlackCallBack(IRestResponse arg1, RestRequestAsyncHandle arg2)
+        {
+            //log response...
+            //throw new NotImplementedException();
         }
     }
+}
 
 
 

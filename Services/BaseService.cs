@@ -43,6 +43,11 @@ namespace ExpressBase.MessageQueue.Services
             this.MessageProducer3 = _mqp as RabbitMqProducer;
         }
 
+        public BaseService(IEbServerEventClient _sec)
+        {
+            this.ServerEventClient = _sec as EbServerEventClient;
+        }
+
         public BaseService(IEbConnectionFactory _dbf, IEbServerEventClient _sec)
         {
             this.EbConnectionFactory = _dbf as EbConnectionFactory;

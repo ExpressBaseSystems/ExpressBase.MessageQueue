@@ -1,6 +1,6 @@
 ﻿using ExpressBase.Common;
 using ExpressBase.Common.Constants;
-using ExpressBase.Common.EbServiceStack.ReqNRes;
+using ExpressBase.Common.EbServiceStack.ReqNRes;    
 using ExpressBase.Common.ServiceClients;
 using ExpressBase.MessageQueue.MQServices;
 using ExpressBase.Objects.ServiceStack_Artifacts;
@@ -12,6 +12,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using ServiceStack;
 using ServiceStack.Auth;
+using ServiceStack.Discovery.Redis;
 using ServiceStack.Logging;
 using ServiceStack.Messaging;
 using ServiceStack.RabbitMq;
@@ -73,13 +74,25 @@ namespace ExpressBase.MessageQueue
         {
             LogManager.LogFactory = new ConsoleLogFactory(debugEnabled: true);
 
-            var jwtprovider = new JwtAuthProviderReader
+            var jwtprovider = new JwtAuthProvider
             {
                 HashAlgorithm = "RS256",
+                PrivateKeyXml = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_JWT_PRIVATE_KEY_XML),
                 PublicKeyXml = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_JWT_PUBLIC_KEY_XML),
 #if (DEBUG)
                 RequireSecureConnection = false,
+                //EncryptPayload = true,
 #endif
+                CreatePayloadFilter = (payload, session) =>
+                {
+                    payload["sub"] = (session as CustomUserSession).UserAuthId;
+                    payload["cid"] = (session as CustomUserSession).CId;
+                    payload["uid"] = (session as CustomUserSession).Uid.ToString();
+                    payload["wc"] = (session as CustomUserSession).WhichConsole;
+                },
+
+                ExpireTokensIn = TimeSpan.FromHours(5),
+                ExpireRefreshTokensIn = TimeSpan.FromHours(8),
                 PersistSession = true,
                 SessionExpiry = TimeSpan.FromHours(12)
             };
@@ -88,6 +101,7 @@ namespace ExpressBase.MessageQueue
                 new IAuthProvider[] {
                     jwtprovider,
                 }));
+
 
 #if (DEBUG)
             SetConfig(new HostConfig { DebugMode = true });
@@ -103,6 +117,13 @@ namespace ExpressBase.MessageQueue
 
             container.Register<IEbServerEventClient>(c => new EbServerEventClient(c)).ReusedWithin(ReuseScope.Request);
 
+            SetConfig(new HostConfig
+            {
+                WebHostUrl = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_MQ_URL)
+            });
+
+            Plugins.Add(new RedisServiceDiscoveryFeature());
+
             RabbitMqMessageFactory rabitFactory = new RabbitMqMessageFactory();
             rabitFactory.ConnectionFactory.UserName = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_RABBIT_USER);
             rabitFactory.ConnectionFactory.Password = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_RABBIT_PASSWORD);
@@ -114,9 +135,9 @@ namespace ExpressBase.MessageQueue
             mqServer.RetryCount = 1;
             //mqServer.RegisterHandler<EmailServicesMqRequest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<SMSSentMqRequest>(base.ExecuteMessage);
-            //mqServer.RegisterHandler<RefreshSolutionConnectionsMqRequest>(base.ExecuteMessage);
+            mqServer.RegisterHandler<RefreshSolutionConnectionsRequest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<SMSStatusLogMqRequest>(base.ExecuteMessage);
-            mqServer.RegisterHandler<UploadFileRequestTest>(base.ExecuteMessage);
+            mqServer.RegisterHandler<UploadFileRequest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<ImageResizeMqRequest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<FileMetaPersistMqRequest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<SlackPostMqRequest>(base.ExecuteMessage);
@@ -160,7 +181,7 @@ namespace ExpressBase.MessageQueue
                                         (requestDto as IEbSSRequest).TenantAccountId = c.Value;
                                     if (requestDto is EbServiceStackRequest)
                                         (requestDto as EbServiceStackRequest).TenantAccountId = c.Value;
-                                    continue;
+                                        continue;
                                 }
                                 if (c.Type == "uid" && !string.IsNullOrEmpty(c.Value))
                                 {
@@ -169,21 +190,21 @@ namespace ExpressBase.MessageQueue
                                         (requestDto as IEbSSRequest).UserId = Convert.ToInt32(c.Value);
                                     if (requestDto is EbServiceStackRequest)
                                         (requestDto as EbServiceStackRequest).UserId = Convert.ToInt32(c.Value);
-                                    continue;
+                                        continue;
                                 }
                                 if (c.Type == "wc" && !string.IsNullOrEmpty(c.Value))
                                 {
                                     RequestContext.Instance.Items.Add("wc", c.Value);
                                     if (requestDto is EbServiceStackRequest)
                                         (requestDto as EbServiceStackRequest).WhichConsole = c.Value.ToString();
-                                    continue;
+                                        continue;
                                 }
                                 if (c.Type == "sub" && !string.IsNullOrEmpty(c.Value))
                                 {
                                     RequestContext.Instance.Items.Add("sub", c.Value);
                                     if (requestDto is EbServiceStackRequest)
                                         (requestDto as EbServiceStackRequest).UserAuthId = c.Value.ToString();
-                                    continue;
+                                        continue;
                                 }
                             }
                             log.Info("Req Filter Completed");

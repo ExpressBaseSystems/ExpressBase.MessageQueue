@@ -2,18 +2,48 @@
 using ExpressBase.Common.Connections;
 using ExpressBase.Common.Constants;
 using ExpressBase.Common.Data;
+using ExpressBase.Common.EbServiceStack.ReqNRes;
+using ExpressBase.Common.ServerEvents_Artifacts;
+using ExpressBase.Common.ServiceClients;
 using ExpressBase.MessageQueue.Services;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using ServiceStack;
+using ServiceStack.Messaging;
 using System;
 using System.Data;
 
 namespace ExpressBase.MessageQueue.MQServices
 {
+    public class ConnectionManagerService : BaseService
+    {
+        public ConnectionManagerService(IMessageProducer _mqp) : base(_mqp) { }
+
+        [Authenticate]
+        public bool Post(RefreshSolutionConnectionsBySolutionIdAsyncRequest request)
+        {
+            try
+            {
+                this.MessageProducer3.Publish(new RefreshSolutionConnectionsRequest()
+                {
+                    TenantAccountId = request.SolutionId,
+                    UserAuthId = request.UserAuthId,
+                });
+            }
+            catch (Exception e)
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+    }
     [Restrict(InternalOnly = true)]
     public class RefreshSolutionConnections : BaseService
     {
-        public bool Post(RefreshSolutionConnectionsMqRequest req)
+        public RefreshSolutionConnections(IEbServerEventClient _sec) : base(_sec) { }
+
+        public bool Post(RefreshSolutionConnectionsRequest req)
         {
             using (var con = this.InfraConnectionFactory.DataDB.GetNewConnection() as Npgsql.NpgsqlConnection)
             {
@@ -47,14 +77,20 @@ namespace ExpressBase.MessageQueue.MQServices
                     }
 
                     Redis.Set<EbConnectionsConfig>(string.Format(CoreConstants.SOLUTION_CONNECTION_REDIS_KEY, req.TenantAccountId), cons);
-
-                    return true;
                 }
                 catch (Exception e)
                 {
                     Log.Info("Exception:" + e.ToString());
                     return false;
                 }
+
+                this.ServerEventClient.Post(new NotifyUserIdRequest()
+                {
+                    Msg = "Connection Updated Succesfully",
+                    Selector = "cmd.OnConnectionUpdateSuccess",
+                    ToUserAuthId = req.UserAuthId
+                });
+                return true;
             }
         }
     }

@@ -13,7 +13,7 @@ namespace ExpressBase.MessageQueue
                     options.Limits.KeepAliveTimeout = TimeSpan.FromMinutes(7);
                 })
                 .UseContentRoot(Directory.GetCurrentDirectory())
-                .UseUrls(urls: "http://*:6000/")
+                .UseUrls(urls: "http://*:41700/")
                 .UseStartup<Startup>()
                 .Build();
 
