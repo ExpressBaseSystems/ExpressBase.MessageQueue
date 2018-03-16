@@ -41,8 +41,8 @@ namespace ExpressBase.MessageQueue.MQServices
                     TenantAccountId = request.TenantAccountId,
                     UserId = request.UserId,
                     UserAuthId = request.UserAuthId,
-                    Token = this.Request.Authorization.Replace("Bearer", string.Empty).Trim()
-
+                    BToken = (!String.IsNullOrEmpty(this.Request.Authorization)) ? this.Request.Authorization.Replace("Bearer", string.Empty).Trim(): String.Empty,
+                    RToken = (!String.IsNullOrEmpty(this.Request.Headers["rToken"]))? this.Request.Headers["rToken"]: String.Empty
                 });
             }
             catch (Exception e)
@@ -88,8 +88,10 @@ namespace ExpressBase.MessageQueue.MQServices
                     request.BucketName
                     ).
                     ToString();
-                this.ServerEventClient.BearerToken = request.Token;
 
+                this.ServerEventClient.BearerToken = request.BToken;
+                this.ServerEventClient.RefreshToken = request.RToken;
+                this.ServerEventClient.RefreshTokenUri = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_GET_ACCESS_TOKEN_URL);
                 this.ServerEventClient.Post<bool>(new NotifyUserIdRequest
                 {
                     Msg = Id,
@@ -132,6 +134,7 @@ namespace ExpressBase.MessageQueue.MQServices
             catch (Exception e)
             {
                 Log.Info("Exception:" + e.ToString());
+                return null;
             }
             return null;
         }
