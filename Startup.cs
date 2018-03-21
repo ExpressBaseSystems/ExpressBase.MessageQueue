@@ -3,6 +3,7 @@ using ExpressBase.Common.Constants;
 using ExpressBase.Common.EbServiceStack.ReqNRes;
 using ExpressBase.Common.ServiceClients;
 using ExpressBase.Common.ServiceStack.Auth;
+using ExpressBase.MessageQueue.Services.Quartz;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using Funq;
 using Microsoft.AspNetCore.Builder;
@@ -10,13 +11,16 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Quartz;
 using ServiceStack;
 using ServiceStack.Auth;
 using ServiceStack.Logging;
 using ServiceStack.Messaging;
+using ServiceStack.Quartz;
 using ServiceStack.RabbitMq;
 using ServiceStack.Redis;
 using System;
+using System.Collections.Specialized;
 using System.IdentityModel.Tokens.Jwt;
 
 namespace ExpressBase.MessageQueue
@@ -113,12 +117,12 @@ namespace ExpressBase.MessageQueue
             var mqServer = new RabbitMqServer(rabitFactory);
             mqServer.RetryCount = 1;
             mqServer.RegisterHandler<RefreshSolutionConnectionsRequest>(base.ExecuteMessage);
-            //mqServer.RegisterHandler<UploadFileRequest>(base.ExecuteMessage);
+            mqServer.RegisterHandler<UploadFileRequest>(base.ExecuteMessage);
+            mqServer.RegisterHandler<ImageResizeRequest>(base.ExecuteMessage);
+            mqServer.RegisterHandler<FileMetaPersistRequest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<EmailServicesMqRequest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<SMSSentMqRequest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<SMSStatusLogMqRequest>(base.ExecuteMessage);
-            //mqServer.RegisterHandler<ImageResizeMqRequest>(base.ExecuteMessage);
-            //mqServer.RegisterHandler<FileMetaPersistMqRequest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<SlackPostMqRequest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<SlackAuthMqRequest>(base.ExecuteMessage);
 
@@ -133,6 +137,30 @@ namespace ExpressBase.MessageQueue
             {
                 return mqServer.CreateMessageQueueClient() as RabbitMqQueueClient;
             });
+
+
+            var quartzFeature = new QuartzFeature();
+
+            //// create a simple job trigger to repeat every minute 
+            //quartzFeature.RegisterJob<MyJob>(
+            //    trigger =>
+            //        trigger.WithSimpleSchedule(s =>
+            //                s.WithInterval(TimeSpan.FromSeconds(30))
+            //                    .RepeatForever()
+            //            )
+            //            .Build()
+            //);
+
+
+            quartzFeature.RegisterJob<MyJob>(
+                trigger =>
+                    trigger.WithDailyTimeIntervalSchedule(s => s.WithInterval(1, IntervalUnit.Minute))
+                        .Build()
+            );
+
+
+            // register the plugin
+            Plugins.Add(quartzFeature);
 
             this.GlobalRequestFilters.Add((req, res, requestDto) =>
             {

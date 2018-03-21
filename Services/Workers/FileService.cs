@@ -17,57 +17,6 @@ using System.Runtime.Serialization;
 
 namespace ExpressBase.MessageQueue.MQServices
 {
-    public class FileService : BaseService
-    {
-        public FileService(IMessageProducer _mqp, IMessageQueueClient _mqc) : base(_mqp, _mqc) { }
-
-        [Authenticate]
-        public bool Any(UploadFileMqRequest request)
-        {
-            try
-            {
-                this.MessageProducer3.Publish(new UploadFileRequest
-                {
-                    FileDetails = new FileMeta
-                    {
-                        FileName = request.FileDetails.FileName,
-                        MetaDataDictionary = (request.FileDetails.MetaDataDictionary != null) ?
-                        request.FileDetails.MetaDataDictionary :
-                        new Dictionary<String, List<string>>() { },
-                        Length = request.FileDetails.Length
-                    },
-                    FileByte = request.FileByte,
-                    BucketName = request.BucketName,
-                    TenantAccountId = request.TenantAccountId,
-                    UserId = request.UserId,
-                    UserAuthId = request.UserAuthId,
-                    BToken = (!String.IsNullOrEmpty(this.Request.Authorization)) ? this.Request.Authorization.Replace("Bearer", string.Empty).Trim(): String.Empty,
-                    RToken = (!String.IsNullOrEmpty(this.Request.Headers["rToken"]))? this.Request.Headers["rToken"]: String.Empty
-                });
-            }
-            catch (Exception e)
-            {
-                Log.Info("Exception:" + e.ToString());
-
-                return false;
-            }
-            return true;
-        }
-
-        [Authenticate]
-        public void Post(DeleteFileMqRequest request)
-        {
-            this.MessageProducer3.Publish(new DeleteFileRequest()
-            {
-                FileDetails = new FileMeta()
-                {
-                    FileName = request.FileDetails.FileName,
-                    ObjectId = request.FileDetails.ObjectId
-                }
-            });
-        }
-    }
-
     [Restrict(InternalOnly = true)]
     public class FileServiceInternal : BaseService
     {
@@ -89,32 +38,33 @@ namespace ExpressBase.MessageQueue.MQServices
                     ).
                     ToString();
 
-                this.ServerEventClient.BearerToken = request.BToken;
-                this.ServerEventClient.RefreshToken = request.RToken;
-                this.ServerEventClient.RefreshTokenUri = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_GET_ACCESS_TOKEN_URL);
-                this.ServerEventClient.Post<bool>(new NotifyUserIdRequest
-                {
-                    Msg = Id,
-                    Selector = "cmd.onUploadSuccess",
-                    ToUserAuthId = request.UserAuthId,
-                });
-                this.MessageProducer3.Publish(new FileMetaPersistRequest
-                {
-                    FileDetails = new FileMeta
-                    {
-                        ObjectId = Id,
-                        FileName = request.FileDetails.FileName,
-                        MetaDataDictionary = (request.FileDetails.MetaDataDictionary != null) ?
-                        request.FileDetails.MetaDataDictionary :
-                        new Dictionary<String, List<string>>() { },
-                        Length = request.FileByte.Length,
-                        FileType = request.FileDetails.FileType
-                    },
-                    BucketName = request.BucketName,
-                    TenantAccountId = request.TenantAccountId,
-                    UserId = request.UserId
-                });
                 if (request.BucketName == "images_original" || (request.BucketName == "dp_images" && request.FileDetails.FileName.Split('_').Length == 2))
+                {
+                    this.ServerEventClient.BearerToken = request.BToken;
+                    this.ServerEventClient.RefreshToken = request.RToken;
+                    this.ServerEventClient.RefreshTokenUri = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_GET_ACCESS_TOKEN_URL);
+                    this.ServerEventClient.Post<bool>(new NotifyUserIdRequest
+                    {
+                        Msg = Id,
+                        Selector = "cmd.onUploadSuccess",
+                        ToUserAuthId = request.UserAuthId,
+                    });
+
+                    this.MessageProducer3.Publish(new FileMetaPersistRequest
+                    {
+                        FileDetails = new FileMeta
+                        {
+                            ObjectId = Id,
+                            FileName = request.FileDetails.FileName,
+                            MetaDataDictionary = (request.FileDetails.MetaDataDictionary != null) ?
+                                                  request.FileDetails.MetaDataDictionary : new Dictionary<String, List<string>>() { },
+                            Length = request.FileByte.Length,
+                            FileType = request.FileDetails.FileType
+                        },
+                        BucketName = request.BucketName,
+                        TenantAccountId = request.TenantAccountId,
+                        UserId = request.UserId
+                    });
                     this.MessageProducer3.Publish(new ImageResizeRequest
                     {
                         ImageInfo = new FileMeta
@@ -129,7 +79,7 @@ namespace ExpressBase.MessageQueue.MQServices
                         TenantAccountId = request.TenantAccountId,
                         UserId = request.UserId
                     });
-                else return null;
+                }
             }
             catch (Exception e)
             {
@@ -214,18 +164,19 @@ namespace ExpressBase.MessageQueue.MQServices
                 {
                     tag = string.Join(",", items.Value);
                 }
+
             EbConnectionFactory connectionFactory = new EbConnectionFactory(request.TenantAccountId, this.Redis);
 
             string sql = "INSERT INTO eb_files(userid, objid, length, filetype, tags, bucketname, uploaddatetime) VALUES(@userid, @objid, @length, @filetype, @tags, @bucketname, CURRENT_TIMESTAMP) RETURNING id";
             DbParameter[] parameters =
-                {
+            {
                         connectionFactory.DataDB.GetNewParameter("userid", EbDbTypes.Int32, request.UserId),
                         connectionFactory.DataDB.GetNewParameter("objid",EbDbTypes.String, request.FileDetails.ObjectId),
                         connectionFactory.DataDB.GetNewParameter("length",EbDbTypes.Int64, request.FileDetails.Length),
-                        connectionFactory.DataDB.GetNewParameter("filetype",EbDbTypes.String, request.FileDetails.FileType),
+                        connectionFactory.DataDB.GetNewParameter("filetype",EbDbTypes.String, (String.IsNullOrEmpty(request.FileDetails.FileType))? "png" : request.FileDetails.FileType),
                         connectionFactory.DataDB.GetNewParameter("tags",EbDbTypes.String, tag),
                         connectionFactory.DataDB.GetNewParameter("bucketname",EbDbTypes.String, request.BucketName)
-                    };
+            };
             var iCount = connectionFactory.DataDB.DoQuery(sql, parameters);
 
             return null;
