@@ -2,7 +2,6 @@
 using ExpressBase.Common.Connections;
 using ExpressBase.Common.Constants;
 using ExpressBase.Common.Data;
-using ExpressBase.Common.EbServiceStack.ReqNRes;
 using ExpressBase.Common.ServerEvents_Artifacts;
 using ExpressBase.Common.ServiceClients;
 using ExpressBase.MessageQueue.Services;
@@ -25,8 +24,11 @@ namespace ExpressBase.MessageQueue.MQServices
             {
                 this.MessageProducer3.Publish(new RefreshSolutionConnectionsRequest()
                 {
-                    TenantAccountId = request.SolutionId,
+                    TenantAccountId = request.TenantAccountId,
+                    UserId = request.UserId,
                     UserAuthId = request.UserAuthId,
+                    BToken = (!String.IsNullOrEmpty(this.Request.Authorization)) ? this.Request.Authorization.Replace("Bearer", string.Empty).Trim() : String.Empty,
+                    RToken = (!String.IsNullOrEmpty(this.Request.Headers["rToken"])) ? this.Request.Headers["rToken"] : String.Empty
                 });
             }
             catch (Exception e)
@@ -83,7 +85,9 @@ namespace ExpressBase.MessageQueue.MQServices
                     Log.Info("Exception:" + e.ToString());
                     return false;
                 }
-
+                this.ServerEventClient.BearerToken = req.BToken;
+                this.ServerEventClient.RefreshToken = req.RToken;
+                this.ServerEventClient.RefreshTokenUri = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_GET_ACCESS_TOKEN_URL);
                 this.ServerEventClient.Post(new NotifyUserIdRequest()
                 {
                     Msg = "Connection Updated Succesfully",
