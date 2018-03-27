@@ -24,7 +24,7 @@ namespace ExpressBase.MessageQueue.MQServices
             {
                 this.MessageProducer3.Publish(new RefreshSolutionConnectionsRequest()
                 {
-                    TenantAccountId = request.TenantAccountId,
+                    TenantAccountId = request.SolutionId, 
                     UserId = request.UserId,
                     UserAuthId = request.UserAuthId,
                     BToken = (!String.IsNullOrEmpty(this.Request.Authorization)) ? this.Request.Authorization.Replace("Bearer", string.Empty).Trim() : String.Empty,
@@ -67,8 +67,8 @@ namespace ExpressBase.MessageQueue.MQServices
                             cons.DataDbConnection = EbSerializers.Json_Deserialize<EbDataDbConnection>(dr["con_obj"].ToString());
                         else if (dr["con_type"].ToString() == EbConnectionTypes.EbOBJECTS.ToString())
                             cons.ObjectsDbConnection = EbSerializers.Json_Deserialize<EbObjectsDbConnection>(dr["con_obj"].ToString());
-                        else if (dr["con_type"].ToString() == EbConnectionTypes.EbFILES.ToString())
-                            cons.FilesDbConnection = EbSerializers.Json_Deserialize<EbFilesDbConnection>(dr["con_obj"].ToString());
+                        //else if (dr["con_type"].ToString() == EbConnectionTypes.EbFILES.ToString())
+                        //    cons.FilesDbConnection = EbSerializers.Json_Deserialize<EbFilesDbConnection>(dr["con_obj"].ToString());
                         else if (dr["con_type"].ToString() == EbConnectionTypes.EbLOGS.ToString())
                             cons.LogsDbConnection = EbSerializers.Json_Deserialize<EbLogsDbConnection>(dr["con_obj"].ToString());
                         else if (dr["con_type"].ToString() == EbConnectionTypes.SMTP.ToString())
