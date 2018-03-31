@@ -10,6 +10,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="CoreCompat.System.Drawing.v2" Version="5.2.0-preview1-r131" />
     <PackageReference Include="FOSS.ServiceStack.ProtoBuf.Core" Version="5.0.2" />
     <PackageReference Include="FOSS.ServiceStack.Quartz.Core" Version="5.0.2" />
     <PackageReference Include="FOSS.ServiceStack.Server.Core" Version="5.0.2" />

@@ -10,8 +10,8 @@ using ServiceStack.Messaging;
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
-using System.Drawing;
-using System.Drawing.Imaging;
+using System.DrawingCore;
+using System.DrawingCore.Imaging;
 using System.IO;
 using System.Runtime.Serialization;
 
@@ -28,7 +28,7 @@ namespace ExpressBase.MessageQueue.MQServices
 
             try
             {
-                string Id = (new EbConnectionFactory(request.TenantAccountId, this.Redis)).FilesDB.UploadFile(
+                request.FileDetails.ObjectId = (new EbConnectionFactory(request.TenantAccountId, this.Redis)).FilesDB.UploadFile(
                     request.FileDetails.FileName,
                     (request.FileDetails.MetaDataDictionary.Count != 0) ?
                         request.FileDetails.MetaDataDictionary :
@@ -45,7 +45,7 @@ namespace ExpressBase.MessageQueue.MQServices
                     this.ServerEventClient.RefreshTokenUri = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_GET_ACCESS_TOKEN_URL);
                     this.ServerEventClient.Post<bool>(new NotifyUserIdRequest
                     {
-                        Msg = Id,
+                        Msg = request.FileDetails,
                         Selector = "cmd.onUploadSuccess",
                         ToUserAuthId = request.UserAuthId,
                     });
@@ -54,7 +54,7 @@ namespace ExpressBase.MessageQueue.MQServices
                     {
                         FileDetails = new FileMeta
                         {
-                            ObjectId = Id,
+                            ObjectId = request.FileDetails.ObjectId,
                             FileName = request.FileDetails.FileName,
                             MetaDataDictionary = (request.FileDetails.MetaDataDictionary != null) ?
                                                   request.FileDetails.MetaDataDictionary : new Dictionary<String, List<string>>() { },
@@ -69,7 +69,7 @@ namespace ExpressBase.MessageQueue.MQServices
                     {
                         ImageInfo = new FileMeta
                         {
-                            ObjectId = Id,
+                            ObjectId = request.FileDetails.ObjectId,
                             FileName = request.FileDetails.FileName,
                             MetaDataDictionary = (request.FileDetails.MetaDataDictionary != null) ?
                             request.FileDetails.MetaDataDictionary :
