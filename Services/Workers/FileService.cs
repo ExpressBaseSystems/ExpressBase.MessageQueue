@@ -38,7 +38,7 @@ namespace ExpressBase.MessageQueue.MQServices
                     ).
                     ToString();
 
-                if (request.BucketName == "images_original" || (request.BucketName == "dp_images" && request.FileDetails.FileName.Split('_').Length == 2))
+                if (request.BucketName == "images_original" || ((request.BucketName == "dp_images" || request.BucketName == "sol_logos") && request.FileDetails.FileName.Split('_').Length == 2)) // Works properly if Soln id doesn't contains a "_" 
                 {
                     this.ServerEventClient.BearerToken = request.BToken;
                     this.ServerEventClient.RefreshToken = request.RToken;
@@ -114,7 +114,28 @@ namespace ExpressBase.MessageQueue.MQServices
                             uploadFileRequest.BucketName = "dp_images";
                             uploadFileRequest.FileDetails = new FileMeta()
                             {
-                                FileName = request.ImageInfo.FileName,
+                                FileName = String.Format("{0}_{1}.{2}", request.ImageInfo.FileName.Split('.')[0], ((DPSizes)Enum.Parse(typeof(DPSizes), size)).ToString(), request.ImageInfo.FileName.Split('.')[1]),
+                                MetaDataDictionary = (request.ImageInfo.MetaDataDictionary != null) ?
+                                    request.ImageInfo.MetaDataDictionary :
+                                    new Dictionary<String, List<string>>() { },
+                                FileType = request.ImageInfo.FileType
+                            };
+                            this.MessageProducer3.Publish(uploadFileRequest);
+                        }
+                    }
+                    else if (request.ImageInfo.FileName.StartsWith("logo"))
+                    {
+                        foreach (string size in Enum.GetNames(typeof(LogoSizes)))
+                        {
+                            Stream ImgStream = Resize(img, (int)((LogoSizes)Enum.Parse(typeof(LogoSizes), size)), (int)((LogoSizes)Enum.Parse(typeof(LogoSizes), size)));
+                            request.ImageByte = new byte[ImgStream.Length];
+                            ImgStream.Read(request.ImageByte, 0, request.ImageByte.Length);
+
+                            uploadFileRequest.FileByte = request.ImageByte;
+                            uploadFileRequest.BucketName = "sol_logos";
+                            uploadFileRequest.FileDetails = new FileMeta()
+                            {
+                                FileName = String.Format("{0}_{1}.{2}", request.ImageInfo.FileName.Split('.')[0], ((LogoSizes)Enum.Parse(typeof(LogoSizes), size)).ToString(), request.ImageInfo.FileName.Split('.')[1]),
                                 MetaDataDictionary = (request.ImageInfo.MetaDataDictionary != null) ?
                                     request.ImageInfo.MetaDataDictionary :
                                     new Dictionary<String, List<string>>() { },
