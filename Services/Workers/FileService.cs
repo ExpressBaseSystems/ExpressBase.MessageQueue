@@ -1,4 +1,5 @@
 using ExpressBase.Common;
+using ExpressBase.Common.Constants;
 using ExpressBase.Common.Data;
 using ExpressBase.Common.EbServiceStack.ReqNRes;
 using ExpressBase.Common.ServerEvents_Artifacts;
@@ -13,7 +14,6 @@ using System.Data.Common;
 using System.DrawingCore;
 using System.DrawingCore.Imaging;
 using System.IO;
-using System.Runtime.Serialization;
 
 namespace ExpressBase.MessageQueue.MQServices
 {
@@ -38,7 +38,7 @@ namespace ExpressBase.MessageQueue.MQServices
                     ).
                     ToString();
 
-                if (request.BucketName == "images_original" || ((request.BucketName == "dp_images" || request.BucketName == "sol_logos") && request.FileDetails.FileName.Split('_').Length == 2)) // Works properly if Soln id doesn't contains a "_" 
+                if (request.BucketName == StaticFileConstants.IMAGES_ORIGINAL || ((request.BucketName == StaticFileConstants.DP_IMAGES || request.BucketName == StaticFileConstants.SOL_LOGOS) && request.FileDetails.FileName.Split(CharConstants.UNDERSCORE).Length == 2)) // Works properly if Soln id doesn't contains a "_" 
                 {
                     this.ServerEventClient.BearerToken = request.BToken;
                     this.ServerEventClient.RefreshToken = request.RToken;
@@ -46,7 +46,7 @@ namespace ExpressBase.MessageQueue.MQServices
                     this.ServerEventClient.Post<bool>(new NotifyUserIdRequest
                     {
                         Msg = request.FileDetails,
-                        Selector = "cmd.onUploadSuccess",
+                        Selector = StaticFileConstants.UPLOADSUCCESS,
                         ToUserAuthId = request.UserAuthId,
                     });
 
@@ -102,7 +102,7 @@ namespace ExpressBase.MessageQueue.MQServices
             {
                 using (Image img = Image.FromStream(ms))
                 {
-                    if (request.ImageInfo.FileName.StartsWith("dp"))
+                    if (request.ImageInfo.FileName.StartsWith(StaticFileConstants.DP))
                     {
                         foreach (string size in Enum.GetNames(typeof(DPSizes)))
                         {
@@ -111,10 +111,10 @@ namespace ExpressBase.MessageQueue.MQServices
                             ImgStream.Read(request.ImageByte, 0, request.ImageByte.Length);
 
                             uploadFileRequest.FileByte = request.ImageByte;
-                            uploadFileRequest.BucketName = "dp_images";
+                            uploadFileRequest.BucketName = StaticFileConstants.DP_IMAGES;
                             uploadFileRequest.FileDetails = new FileMeta()
                             {
-                                FileName = String.Format("{0}_{1}.{2}", request.ImageInfo.FileName.Split('.')[0], ((DPSizes)Enum.Parse(typeof(DPSizes), size)).ToString(), request.ImageInfo.FileName.Split('.')[1]),
+                                FileName = String.Format("{0}_{1}.{2}", request.ImageInfo.FileName.Split(CharConstants.DOT)[0], ((DPSizes)Enum.Parse(typeof(DPSizes), size)).ToString(), request.ImageInfo.FileName.Split(CharConstants.DOT)[1]),
                                 MetaDataDictionary = (request.ImageInfo.MetaDataDictionary != null) ?
                                     request.ImageInfo.MetaDataDictionary :
                                     new Dictionary<String, List<string>>() { },
@@ -123,7 +123,7 @@ namespace ExpressBase.MessageQueue.MQServices
                             this.MessageProducer3.Publish(uploadFileRequest);
                         }
                     }
-                    else if (request.ImageInfo.FileName.StartsWith("logo"))
+                    else if (request.ImageInfo.FileName.StartsWith(StaticFileConstants.LOGO))
                     {
                         foreach (string size in Enum.GetNames(typeof(LogoSizes)))
                         {
@@ -132,10 +132,14 @@ namespace ExpressBase.MessageQueue.MQServices
                             ImgStream.Read(request.ImageByte, 0, request.ImageByte.Length);
 
                             uploadFileRequest.FileByte = request.ImageByte;
-                            uploadFileRequest.BucketName = "sol_logos";
+                            uploadFileRequest.BucketName = StaticFileConstants.SOL_LOGOS;
                             uploadFileRequest.FileDetails = new FileMeta()
                             {
-                                FileName = String.Format("{0}_{1}.{2}", request.ImageInfo.FileName.Split('.')[0], ((LogoSizes)Enum.Parse(typeof(LogoSizes), size)).ToString(), request.ImageInfo.FileName.Split('.')[1]),
+                                FileName = String.Format("{0}_{1}.{2}", 
+                                                request.ImageInfo.FileName.Split(CharConstants.DOT)[0], 
+                                                ((LogoSizes)Enum.Parse(typeof(LogoSizes), size)).ToString(), 
+                                                request.ImageInfo.FileName.Split(CharConstants.DOT)[1]),
+
                                 MetaDataDictionary = (request.ImageInfo.MetaDataDictionary != null) ?
                                     request.ImageInfo.MetaDataDictionary :
                                     new Dictionary<String, List<string>>() { },
@@ -155,15 +159,15 @@ namespace ExpressBase.MessageQueue.MQServices
 
                             uploadFileRequest.FileDetails = new FileMeta()
                             {
-                                FileName = request.ImageInfo.ObjectId + "_" + size + ".png",
+                                FileName = request.ImageInfo.ObjectId + CharConstants.UNDERSCORE + size + StaticFileConstants.DOTPNG,
                                 MetaDataDictionary = (request.ImageInfo.MetaDataDictionary != null) ?
                                     request.ImageInfo.MetaDataDictionary :
                                     new Dictionary<String, List<string>>() { },
-                                FileType = "png"
+                                FileType = StaticFileConstants.PNG
 
                             };
                             uploadFileRequest.FileByte = request.ImageByte;
-                            uploadFileRequest.BucketName = string.Format("images_{0}", size);
+                            uploadFileRequest.BucketName = string.Format("{0}_{1}", StaticFileConstants.IMAGES, size);
 
                             this.MessageProducer3.Publish(uploadFileRequest);
                         }
@@ -183,7 +187,7 @@ namespace ExpressBase.MessageQueue.MQServices
             if (request.FileDetails.MetaDataDictionary.Count != 0)
                 foreach (var items in request.FileDetails.MetaDataDictionary)
                 {
-                    tag = string.Join(",", items.Value);
+                    tag = string.Join(CharConstants.COMMA, items.Value);
                 }
 
             EbConnectionFactory connectionFactory = new EbConnectionFactory(request.TenantAccountId, this.Redis);
@@ -194,7 +198,7 @@ namespace ExpressBase.MessageQueue.MQServices
                         connectionFactory.DataDB.GetNewParameter("userid", EbDbTypes.Int32, request.UserId),
                         connectionFactory.DataDB.GetNewParameter("objid",EbDbTypes.String, request.FileDetails.ObjectId),
                         connectionFactory.DataDB.GetNewParameter("length",EbDbTypes.Int64, request.FileDetails.Length),
-                        connectionFactory.DataDB.GetNewParameter("filetype",EbDbTypes.String, (String.IsNullOrEmpty(request.FileDetails.FileType))? "png" : request.FileDetails.FileType),
+                        connectionFactory.DataDB.GetNewParameter("filetype",EbDbTypes.String, (String.IsNullOrEmpty(request.FileDetails.FileType))? StaticFileConstants.PNG : request.FileDetails.FileType),
                         connectionFactory.DataDB.GetNewParameter("tags",EbDbTypes.String, tag),
                         connectionFactory.DataDB.GetNewParameter("bucketname",EbDbTypes.String, request.BucketName)
             };
