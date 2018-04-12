@@ -135,9 +135,9 @@ namespace ExpressBase.MessageQueue.MQServices
                             uploadFileRequest.BucketName = StaticFileConstants.SOL_LOGOS;
                             uploadFileRequest.FileDetails = new FileMeta()
                             {
-                                FileName = String.Format("{0}_{1}.{2}", 
-                                                request.ImageInfo.FileName.Split(CharConstants.DOT)[0], 
-                                                ((LogoSizes)Enum.Parse(typeof(LogoSizes), size)).ToString(), 
+                                FileName = String.Format("{0}_{1}.{2}",
+                                                request.ImageInfo.FileName.Split(CharConstants.DOT)[0],
+                                                ((LogoSizes)Enum.Parse(typeof(LogoSizes), size)).ToString(),
                                                 request.ImageInfo.FileName.Split(CharConstants.DOT)[1]),
 
                                 MetaDataDictionary = (request.ImageInfo.MetaDataDictionary != null) ?
