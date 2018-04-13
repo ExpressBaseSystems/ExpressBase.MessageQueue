@@ -38,7 +38,7 @@ namespace ExpressBase.MessageQueue.MQServices
                     ).
                     ToString();
 
-                if (request.BucketName == StaticFileConstants.IMAGES_ORIGINAL || ((request.BucketName == StaticFileConstants.DP_IMAGES || request.BucketName == StaticFileConstants.SOL_LOGOS) && request.FileDetails.FileName.Split(CharConstants.UNDERSCORE).Length == 2)) // Works properly if Soln id doesn't contains a "_" 
+                if (request.BucketName == StaticFileConstants.IMAGES_ORIGINAL || ((request.BucketName == StaticFileConstants.DP_IMAGES || request.BucketName == StaticFileConstants.SOL_LOGOS || request.BucketName == StaticFileConstants.FILES) && request.FileDetails.FileName.Split(CharConstants.UNDERSCORE).Length == 2)) // Works properly if Soln id doesn't contains a "_" 
                 {
                     this.ServerEventClient.BearerToken = request.BToken;
                     this.ServerEventClient.RefreshToken = request.RToken;
@@ -65,20 +65,21 @@ namespace ExpressBase.MessageQueue.MQServices
                         TenantAccountId = request.TenantAccountId,
                         UserId = request.UserId
                     });
-                    this.MessageProducer3.Publish(new ImageResizeRequest
-                    {
-                        ImageInfo = new FileMeta
+                    if (Enum.IsDefined(typeof(ImageTypes), request.FileDetails.FileType.ToString()))
+                        this.MessageProducer3.Publish(new ImageResizeRequest
                         {
-                            ObjectId = request.FileDetails.ObjectId,
-                            FileName = request.FileDetails.FileName,
-                            MetaDataDictionary = (request.FileDetails.MetaDataDictionary != null) ?
+                            ImageInfo = new FileMeta
+                            {
+                                ObjectId = request.FileDetails.ObjectId,
+                                FileName = request.FileDetails.FileName,
+                                MetaDataDictionary = (request.FileDetails.MetaDataDictionary != null) ?
                             request.FileDetails.MetaDataDictionary :
                             new Dictionary<String, List<string>>() { }
-                        },
-                        ImageByte = request.FileByte,
-                        TenantAccountId = request.TenantAccountId,
-                        UserId = request.UserId
-                    });
+                            },
+                            ImageByte = request.FileByte,
+                            TenantAccountId = request.TenantAccountId,
+                            UserId = request.UserId
+                        });
                 }
             }
             catch (Exception e)
