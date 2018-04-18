@@ -85,15 +85,18 @@ namespace ExpressBase.MessageQueue.MQServices
                     Log.Info("Exception:" + e.ToString());
                     return false;
                 }
-                this.ServerEventClient.BearerToken = req.BToken;
-                this.ServerEventClient.RefreshToken = req.RToken;
-                this.ServerEventClient.RefreshTokenUri = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_GET_ACCESS_TOKEN_URL);
-                this.ServerEventClient.Post(new NotifyUserIdRequest()
+                if (!String.IsNullOrEmpty(req.UserAuthId))
                 {
-                    Msg = "Connection Updated Succesfully",
-                    Selector = "cmd.OnConnectionUpdateSuccess",
-                    ToUserAuthId = req.UserAuthId
-                });
+                    this.ServerEventClient.BearerToken = req.BToken;
+                    this.ServerEventClient.RefreshToken = req.RToken;
+                    this.ServerEventClient.RefreshTokenUri = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_GET_ACCESS_TOKEN_URL);
+                    this.ServerEventClient.Post(new NotifyUserIdRequest()
+                    {
+                        Msg = "Connection Updated Succesfully",
+                        Selector = "cmd.OnConnectionUpdateSuccess",
+                        ToUserAuthId = req.UserAuthId
+                    });
+                }
                 return true;
             }
         }
