@@ -45,7 +45,7 @@ namespace ExpressBase.MessageQueue.MQServices
     {
         public RefreshSolutionConnections(IEbServerEventClient _sec) : base(_sec) { }
 
-        public bool Post(RefreshSolutionConnectionsRequest req)
+        public string Post(RefreshSolutionConnectionsRequest req)
         {
             using (var con = this.InfraConnectionFactory.DataDB.GetNewConnection() as Npgsql.NpgsqlConnection)
             {
@@ -78,12 +78,12 @@ namespace ExpressBase.MessageQueue.MQServices
                         // ... More to come
                     }
 
-                    Redis.Set<EbConnectionsConfig>(string.Format(CoreConstants.SOLUTION_CONNECTION_REDIS_KEY, req.TenantAccountId), cons);
+                   Redis.Set<EbConnectionsConfig>(string.Format(CoreConstants.SOLUTION_CONNECTION_REDIS_KEY, req.TenantAccountId), cons);
                 }
                 catch (Exception e)
                 {
                     Log.Info("Exception:" + e.ToString());
-                    return false;
+                    return null;
                 }
                 if (!String.IsNullOrEmpty(req.UserAuthId))
                 {
@@ -97,7 +97,7 @@ namespace ExpressBase.MessageQueue.MQServices
                         ToUserAuthId = req.UserAuthId
                     });
                 }
-                return true;
+                return null;
             }
         }
     }
