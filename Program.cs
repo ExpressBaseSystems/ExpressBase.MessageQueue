@@ -9,7 +9,8 @@ namespace ExpressBase.MessageQueue
         public static void Main(string[] args)
         {
             var host = new WebHostBuilder()
-                .UseKestrel(options => {
+                .UseKestrel(options =>
+                {
                     options.Limits.KeepAliveTimeout = TimeSpan.FromMinutes(7);
                 })
                 .UseContentRoot(Directory.GetCurrentDirectory())

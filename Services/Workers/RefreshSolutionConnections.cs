@@ -15,7 +15,9 @@ namespace ExpressBase.MessageQueue.MQServices
 {
     public class ConnectionManagerService : BaseService
     {
-        public ConnectionManagerService(IMessageProducer _mqp) : base(_mqp) { }
+        public ConnectionManagerService(IMessageProducer _mqp) : base(_mqp)
+        {
+        }
 
         [Authenticate]
         public bool Post(RefreshSolutionConnectionsBySolutionIdAsyncRequest request)
@@ -24,7 +26,7 @@ namespace ExpressBase.MessageQueue.MQServices
             {
                 this.MessageProducer3.Publish(new RefreshSolutionConnectionsRequest()
                 {
-                    TenantAccountId = request.SolutionId, 
+                    TenantAccountId = request.SolutionId,
                     UserId = request.UserId,
                     UserAuthId = request.UserAuthId,
                     BToken = (!String.IsNullOrEmpty(this.Request.Authorization)) ? this.Request.Authorization.Replace("Bearer", string.Empty).Trim() : String.Empty,
@@ -38,12 +40,14 @@ namespace ExpressBase.MessageQueue.MQServices
 
             return true;
         }
-
     }
+
     [Restrict(InternalOnly = true)]
     public class RefreshSolutionConnections : BaseService
     {
-        public RefreshSolutionConnections(IEbServerEventClient _sec) : base(_sec) { }
+        public RefreshSolutionConnections(IEbServerEventClient _sec) : base(_sec)
+        {
+        }
 
         public string Post(RefreshSolutionConnectionsRequest req)
         {
@@ -78,7 +82,7 @@ namespace ExpressBase.MessageQueue.MQServices
                         // ... More to come
                     }
 
-                   Redis.Set<EbConnectionsConfig>(string.Format(CoreConstants.SOLUTION_CONNECTION_REDIS_KEY, req.TenantAccountId), cons);
+                    Redis.Set<EbConnectionsConfig>(string.Format(CoreConstants.SOLUTION_CONNECTION_REDIS_KEY, req.TenantAccountId), cons);
                 }
                 catch (Exception e)
                 {

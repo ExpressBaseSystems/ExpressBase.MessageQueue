@@ -20,7 +20,6 @@ using ServiceStack.Quartz;
 using ServiceStack.RabbitMq;
 using ServiceStack.Redis;
 using System;
-using System.Collections.Specialized;
 using System.IdentityModel.Tokens.Jwt;
 
 namespace ExpressBase.MessageQueue
@@ -71,7 +70,9 @@ namespace ExpressBase.MessageQueue
 
     public class AppHost : AppHostBase
     {
-        public AppHost() : base("EXPRESSbase Message Queue", typeof(AppHost).Assembly) { }
+        public AppHost() : base("EXPRESSbase Message Queue", typeof(AppHost).Assembly)
+        {
+        }
 
         public override void Configure(Container container)
         {
@@ -91,7 +92,6 @@ namespace ExpressBase.MessageQueue
                 new IAuthProvider[] {
                     jwtprovider,
                 }));
-
 
 #if (DEBUG)
             SetConfig(new HostConfig { DebugMode = true });
@@ -138,10 +138,9 @@ namespace ExpressBase.MessageQueue
                 return mqServer.CreateMessageQueueClient() as RabbitMqQueueClient;
             });
 
-
             var quartzFeature = new QuartzFeature();
 
-            //// create a simple job trigger to repeat every minute 
+            //// create a simple job trigger to repeat every minute
             //quartzFeature.RegisterJob<MyJob>(
             //    trigger =>
             //        trigger.WithSimpleSchedule(s =>
@@ -151,13 +150,11 @@ namespace ExpressBase.MessageQueue
             //            .Build()
             //);
 
-
             quartzFeature.RegisterJob<MyJob>(
                 trigger =>
                     trigger.WithDailyTimeIntervalSchedule(s => s.WithInterval(1, IntervalUnit.Minute))
                         .Build()
             );
-
 
             // register the plugin
             Plugins.Add(quartzFeature);
@@ -188,7 +185,7 @@ namespace ExpressBase.MessageQueue
                                         (requestDto as IEbSSRequest).TenantAccountId = c.Value;
                                     if (requestDto is EbServiceStackRequest)
                                         (requestDto as EbServiceStackRequest).TenantAccountId = c.Value;
-                                        continue;
+                                    continue;
                                 }
                                 if (c.Type == "uid" && !string.IsNullOrEmpty(c.Value))
                                 {
@@ -197,21 +194,21 @@ namespace ExpressBase.MessageQueue
                                         (requestDto as IEbSSRequest).UserId = Convert.ToInt32(c.Value);
                                     if (requestDto is EbServiceStackRequest)
                                         (requestDto as EbServiceStackRequest).UserId = Convert.ToInt32(c.Value);
-                                        continue;
+                                    continue;
                                 }
                                 if (c.Type == "wc" && !string.IsNullOrEmpty(c.Value))
                                 {
                                     RequestContext.Instance.Items.Add("wc", c.Value);
                                     if (requestDto is EbServiceStackRequest)
                                         (requestDto as EbServiceStackRequest).WhichConsole = c.Value.ToString();
-                                        continue;
+                                    continue;
                                 }
                                 if (c.Type == "sub" && !string.IsNullOrEmpty(c.Value))
                                 {
                                     RequestContext.Instance.Items.Add("sub", c.Value);
                                     if (requestDto is EbServiceStackRequest)
                                         (requestDto as EbServiceStackRequest).UserAuthId = c.Value.ToString();
-                                        continue;
+                                    continue;
                                 }
                             }
                             log.Info("Req Filter Completed");
@@ -228,4 +225,5 @@ namespace ExpressBase.MessageQueue
         }
     }
 }
+
 //https://github.com/ServiceStack/ServiceStack/blob/master/tests/ServiceStack.Server.Tests/Messaging/MqServerIntroTests.cs

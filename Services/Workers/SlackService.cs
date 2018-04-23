@@ -1,6 +1,5 @@
 ﻿using ExpressBase.Common;
 using ExpressBase.Common.Data;
-using ExpressBase.Common.EbServiceStack.ReqNRes;
 using ExpressBase.Common.Structures;
 using ExpressBase.MessageQueue.Services;
 using ExpressBase.Objects.ServiceStack_Artifacts;
@@ -13,10 +12,11 @@ using System.Data.Common;
 
 namespace ExpressBase.MessageQueue.MQServices
 {
-    
     public class SlackService : BaseService
     {
-        public SlackService(IMessageProducer _mqp) : base(_mqp) { }
+        public SlackService(IMessageProducer _mqp) : base(_mqp)
+        {
+        }
 
         [Authenticate]
         public bool Post(SlackPostAsyncRequest request)
@@ -27,7 +27,7 @@ namespace ExpressBase.MessageQueue.MQServices
             }
             catch (Exception e)
             {
-                Log.Info("Exception: "+ e.Message.ToString());
+                Log.Info("Exception: " + e.Message.ToString());
                 return false;
             }
             return true;
@@ -42,7 +42,7 @@ namespace ExpressBase.MessageQueue.MQServices
             }
             catch (Exception e)
             {
-                Log.Info("Exception: "+ e.Message.ToString());
+                Log.Info("Exception: " + e.Message.ToString());
                 return false;
             }
             return true;
@@ -54,7 +54,6 @@ namespace ExpressBase.MessageQueue.MQServices
     {
         public SlackServiceInternal()
         {
-
         }
 
         public bool Post(SlackAuthRequest req)
@@ -120,7 +119,6 @@ namespace ExpressBase.MessageQueue.MQServices
 
                     //Execute the request
                     var res = client.ExecuteAsyncPost(request, SlackCallBack, "POST");
-
                 }
                 else if (req.PostType == 0)
                 {
@@ -136,7 +134,8 @@ namespace ExpressBase.MessageQueue.MQServices
                     //Execute the request
                     var res = client.ExecuteAsyncPost(request, SlackCallBack, "POST");
                 }
-            }catch(Exception e)
+            }
+            catch (Exception e)
             {
                 Log.Info("Exception: " + e.Message.ToString());
                 return false;
@@ -147,7 +146,6 @@ namespace ExpressBase.MessageQueue.MQServices
 
         private void AuthRes(IRestResponse arg1, RestRequestAsyncHandle arg2)
         {
-
         }
 
         private void SlackCallBack(IRestResponse arg1, RestRequestAsyncHandle arg2)
@@ -157,8 +155,6 @@ namespace ExpressBase.MessageQueue.MQServices
         }
     }
 }
-
-
 
 //To a take Screenshot of a div (Javascript)
 //https://stackoverflow.com/questions/6887183/how-to-take-screenshot-of-a-div-with-javascript

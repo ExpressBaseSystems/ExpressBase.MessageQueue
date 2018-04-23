@@ -20,7 +20,9 @@ namespace ExpressBase.MessageQueue.MQServices
     [Restrict(InternalOnly = true)]
     public class FileServiceInternal : BaseService
     {
-        public FileServiceInternal(IMessageProducer _mqp, IMessageQueueClient _mqc, IEbServerEventClient _sec) : base(_mqp, _mqc, _sec) { }
+        public FileServiceInternal(IMessageProducer _mqp, IMessageQueueClient _mqc, IEbServerEventClient _sec) : base(_mqp, _mqc, _sec)
+        {
+        }
 
         public string Post(UploadFileRequest request)
         {
@@ -38,7 +40,7 @@ namespace ExpressBase.MessageQueue.MQServices
                     ).
                     ToString();
 
-                if (request.BucketName == StaticFileConstants.IMAGES_ORIGINAL || ((request.BucketName == StaticFileConstants.DP_IMAGES || request.BucketName == StaticFileConstants.SOL_LOGOS || request.BucketName == StaticFileConstants.FILES) && request.FileDetails.FileName.Split(CharConstants.UNDERSCORE).Length == 2)) // Works properly if Soln id doesn't contains a "_" 
+                if (request.BucketName == StaticFileConstants.IMAGES_ORIGINAL || ((request.BucketName == StaticFileConstants.DP_IMAGES || request.BucketName == StaticFileConstants.SOL_LOGOS || request.BucketName == StaticFileConstants.FILES) && request.FileDetails.FileName.Split(CharConstants.UNDERSCORE).Length == 2)) // Works properly if Soln id doesn't contains a "_"
                 {
                     this.ServerEventClient.BearerToken = request.BToken;
                     this.ServerEventClient.RefreshToken = request.RToken;
@@ -165,7 +167,6 @@ namespace ExpressBase.MessageQueue.MQServices
                                     request.ImageInfo.MetaDataDictionary :
                                     new Dictionary<String, List<string>>() { },
                                 FileType = StaticFileConstants.PNG
-
                             };
                             uploadFileRequest.FileByte = request.ImageByte;
                             uploadFileRequest.BucketName = string.Format("{0}_{1}", StaticFileConstants.IMAGES, size);

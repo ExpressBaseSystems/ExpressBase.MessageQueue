@@ -31,7 +31,9 @@ namespace ExpressBase.MessageQueue.Services
             }
         }
 
-        public BaseService() { }
+        public BaseService()
+        {
+        }
 
         public BaseService(IEbConnectionFactory _dbf)
         {
