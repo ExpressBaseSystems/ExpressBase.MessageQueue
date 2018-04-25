@@ -20,7 +20,7 @@ namespace ExpressBase.MessageQueue.MQServices
         }
 
         [Authenticate]
-        public bool Post(RefreshSolutionConnectionsBySolutionIdAsyncRequest request)
+        public string Post(RefreshSolutionConnectionsBySolutionIdAsyncRequest request)
         {
             try
             {
@@ -35,10 +35,10 @@ namespace ExpressBase.MessageQueue.MQServices
             }
             catch (Exception e)
             {
-                return false;
+                return "Failed";
             }
 
-            return true;
+            return "Success";
         }
     }
 
@@ -96,7 +96,7 @@ namespace ExpressBase.MessageQueue.MQServices
                     this.ServerEventClient.RefreshTokenUri = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_GET_ACCESS_TOKEN_URL);
                     this.ServerEventClient.Post(new NotifyUserIdRequest()
                     {
-                        Msg = "Connection Updated Succesfully",
+                        Msg = "Connection Updated Successfully",
                         Selector = "cmd.OnConnectionUpdateSuccess",
                         ToUserAuthId = req.UserAuthId
                     });
