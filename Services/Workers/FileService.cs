@@ -45,7 +45,7 @@ namespace ExpressBase.MessageQueue.MQServices
                     this.ServerEventClient.BearerToken = request.BToken;
                     this.ServerEventClient.RefreshToken = request.RToken;
                     this.ServerEventClient.RefreshTokenUri = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_GET_ACCESS_TOKEN_URL);
-                    this.ServerEventClient.Post<bool>(new NotifyUserIdRequest
+                    this.ServerEventClient.Post<string>(new NotifyUserIdRequest
                     {
                         Msg = request.FileDetails,
                         Selector = StaticFileConstants.UPLOADSUCCESS,
