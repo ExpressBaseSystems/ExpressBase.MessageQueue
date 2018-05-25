@@ -20,8 +20,10 @@ namespace ExpressBase.MessageQueue.MQServices
         }
 
         [Authenticate]
-        public string Post(RefreshSolutionConnectionsBySolutionIdAsyncRequest request)
+        public RefreshSolutionConnectionsAsyncResponse Post(RefreshSolutionConnectionsBySolutionIdAsyncRequest request)
         {
+            RefreshSolutionConnectionsAsyncResponse res = new RefreshSolutionConnectionsAsyncResponse();
+
             try
             {
                 this.MessageProducer3.Publish(new RefreshSolutionConnectionsRequest()
@@ -35,10 +37,11 @@ namespace ExpressBase.MessageQueue.MQServices
             }
             catch (Exception e)
             {
-                return "Failed";
+                res.ResponseStatus.Message = e.Message;
+                res.ResponseStatus.StackTrace = e.StackTrace;
             }
 
-            return "Success";
+            return res;
         }
     }
 
@@ -49,12 +52,14 @@ namespace ExpressBase.MessageQueue.MQServices
         {
         }
 
-        public string Post(RefreshSolutionConnectionsRequest req)
+        public RefreshSolutionConnectionsResponse Post(RefreshSolutionConnectionsRequest req)
         {
-            using (var con = this.InfraConnectionFactory.DataDB.GetNewConnection() as Npgsql.NpgsqlConnection)
+            RefreshSolutionConnectionsResponse res = null;
+            try
             {
-                try
+                using (var con = this.InfraConnectionFactory.DataDB.GetNewConnection() as Npgsql.NpgsqlConnection)
                 {
+
                     con.Open();
                     string sql = @"SELECT con_type, con_obj FROM eb_connections WHERE solution_id = @solution_id AND eb_del = 'F'";
                     DataTable dt = new DataTable();
@@ -81,14 +86,10 @@ namespace ExpressBase.MessageQueue.MQServices
                             cons.SMSConnection = EbSerializers.Json_Deserialize<SMSConnection>(dr["con_obj"].ToString());
                         // ... More to come
                     }
-
                     Redis.Set<EbConnectionsConfig>(string.Format(CoreConstants.SOLUTION_CONNECTION_REDIS_KEY, req.TenantAccountId), cons);
                 }
-                catch (Exception e)
-                {
-                    Log.Info("Exception:" + e.ToString());
-                    return null;
-                }
+                
+
                 if (!String.IsNullOrEmpty(req.UserAuthId))
                 {
                     this.ServerEventClient.BearerToken = req.BToken;
@@ -101,8 +102,14 @@ namespace ExpressBase.MessageQueue.MQServices
                         ToUserAuthId = req.UserAuthId
                     });
                 }
-                return null;
             }
+            catch (Exception e)
+            {
+                Log.Info("Exception:" + e.ToString());
+                res = new RefreshSolutionConnectionsResponse();
+                res.ResponseStatus.Message = e.Message;
+            }
+            return res;
         }
     }
 }
