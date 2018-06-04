@@ -73,6 +73,7 @@ namespace ExpressBase.MessageQueue.MQServices
                 }
                 catch (Exception e)
                 {
+                    Console.WriteLine("Exception: " + e.ToString());
                     return false;
                 }
             }
