@@ -52,6 +52,7 @@ namespace ExpressBase.MessageQueue.MQServices
                         ToUserAuthId = request.UserAuthId,
                     });
 
+                    Console.WriteLine("Notified User of Upload :" + request.FileDetails.ObjectId);
                     this.MessageProducer3.Publish(new FileMetaPersistRequest
                     {
                         FileDetails = new FileMeta
