@@ -40,10 +40,10 @@ namespace ExpressBase.MessageQueue.MQServices
                     ).
                     ToString();
 
-                Console.WriteLine("----------------------------------------->Notified User of Upload :" + request.FileDetails.ObjectId + "\nBucket Name: " + request.BucketName);
-
                 if (request.BucketName == StaticFileConstants.IMAGES_ORIGINAL || ((request.BucketName == StaticFileConstants.DP_IMAGES || request.BucketName == StaticFileConstants.SOL_LOGOS || request.BucketName == StaticFileConstants.FILES) && request.FileDetails.FileName.Split(CharConstants.UNDERSCORE).Length == 2)) // Works properly if Soln id doesn't contains a "_"
                 {
+                    Console.WriteLine("----------------------------------------->Notified User of Upload :" + request.FileDetails.ObjectId + "\nBucket Name: " + request.BucketName);
+
                     this.ServerEventClient.BearerToken = request.BToken;
                     this.ServerEventClient.RefreshToken = request.RToken;
                     this.ServerEventClient.RefreshTokenUri = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_GET_ACCESS_TOKEN_URL);
