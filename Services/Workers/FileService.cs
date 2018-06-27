@@ -11,8 +11,8 @@ using ServiceStack.Messaging;
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
-using System.DrawingCore;
-using System.DrawingCore.Imaging;
+using System.Drawing;
+using System.Drawing.Imaging;
 using System.IO;
 
 namespace ExpressBase.MessageQueue.MQServices
