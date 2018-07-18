@@ -153,6 +153,31 @@ namespace ExpressBase.MessageQueue.MQServices
                             this.MessageProducer3.Publish(uploadFileRequest);
                         }
                     }
+                    else if (request.ImageInfo.FileName.StartsWith(StaticFileConstants.LOCATION_DP))
+                    {
+                        foreach (string size in Enum.GetNames(typeof(LogoSizes)))
+                        {
+                            Stream ImgStream = Resize(img, (int)((LogoSizes)Enum.Parse(typeof(LogoSizes), size)), (int)((LogoSizes)Enum.Parse(typeof(LogoSizes), size)));
+                            request.ImageByte = new byte[ImgStream.Length];
+                            ImgStream.Read(request.ImageByte, 0, request.ImageByte.Length);
+
+                            uploadFileRequest.FileByte = request.ImageByte;
+                            uploadFileRequest.BucketName = StaticFileConstants.LOCATION_IMAGES;
+                            uploadFileRequest.FileDetails = new FileMeta()
+                            {
+                                FileName = String.Format("{0}_{1}.{2}",
+                                                request.ImageInfo.FileName.Split(CharConstants.DOT)[0],
+                                                ((LogoSizes)Enum.Parse(typeof(LogoSizes), size)).ToString(),
+                                                request.ImageInfo.FileName.Split(CharConstants.DOT)[1]),
+
+                                MetaDataDictionary = (request.ImageInfo.MetaDataDictionary != null) ?
+                                    request.ImageInfo.MetaDataDictionary :
+                                    new Dictionary<String, List<string>>() { },
+                                FileType = request.ImageInfo.FileType
+                            };
+                            this.MessageProducer3.Publish(uploadFileRequest);
+                        }
+                    }
                     else
                     {
                         foreach (string size in Enum.GetNames(typeof(ImageSizes)))
