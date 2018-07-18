@@ -40,7 +40,7 @@ namespace ExpressBase.MessageQueue.MQServices
                     ).
                     ToString();
 
-                if (request.BucketName == StaticFileConstants.IMAGES_ORIGINAL || ((request.BucketName == StaticFileConstants.DP_IMAGES || request.BucketName == StaticFileConstants.SOL_LOGOS ) && request.FileDetails.FileName.Split(CharConstants.UNDERSCORE).Length == 2) || request.BucketName == StaticFileConstants.FILES) // Works properly if Soln id doesn't contains a "_"
+                if (request.BucketName == StaticFileConstants.IMAGES_ORIGINAL || ((request.BucketName == StaticFileConstants.DP_IMAGES || request.BucketName == StaticFileConstants.SOL_LOGOS ) && request.FileDetails.FileName.Split(CharConstants.UNDERSCORE).Length == 2) || request.BucketName == StaticFileConstants.FILES || (request.BucketName == StaticFileConstants.LOCATION_IMAGES && request.FileDetails.FileName.Split(CharConstants.UNDERSCORE).Length == 3)) // Works properly if Soln id doesn't contains a "_"
                 {
                     Console.WriteLine("----------------------------------------->Notified User of Upload :" + request.FileDetails.ObjectId + "\nBucket Name: " + request.BucketName);
 
