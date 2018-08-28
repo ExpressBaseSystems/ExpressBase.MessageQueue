@@ -2,6 +2,7 @@ using ExpressBase.Common;
 using ExpressBase.Common.Constants;
 using ExpressBase.Common.Data;
 using ExpressBase.Common.EbServiceStack.ReqNRes;
+using ExpressBase.Common.Enums;
 using ExpressBase.Common.ServerEvents_Artifacts;
 using ExpressBase.Common.ServiceClients;
 using ExpressBase.Common.Structures;
@@ -32,58 +33,98 @@ namespace ExpressBase.MessageQueue.MQServices
             {
                 request.FileDetails.ObjectId = (new EbConnectionFactory(request.TenantAccountId, this.Redis)).FilesDB.UploadFile(
                     request.FileDetails.FileName,
-                    (request.FileDetails.MetaDataDictionary.Count != 0) ?
-                        request.FileDetails.MetaDataDictionary :
-                        new Dictionary<String, List<string>>() { },
-                    request.FileByte,
-                    request.BucketName
-                    ).
-                    ToString();
+                    request.FileDetails.MetaDataDictionary.Count != 0 ? request.FileDetails.MetaDataDictionary : new Dictionary<String, List<string>>() { },
+                    request.Byte,
+                    request.FileDetails.FileCategory
+                    );
 
-                if (request.BucketName == StaticFileConstants.IMAGES_ORIGINAL || ((request.BucketName == StaticFileConstants.DP_IMAGES || request.BucketName == StaticFileConstants.SOL_LOGOS ) && request.FileDetails.FileName.Split(CharConstants.UNDERSCORE).Length == 2) || request.BucketName == StaticFileConstants.FILES || (request.BucketName == StaticFileConstants.LOCATION_IMAGES && request.FileDetails.FileName.Split(CharConstants.UNDERSCORE).Length == 3)) // Works properly if Soln id doesn't contains a "_"
+                this.ServerEventClient.BearerToken = request.BToken;
+                this.ServerEventClient.RefreshToken = request.RToken;
+                this.ServerEventClient.RefreshTokenUri = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_GET_ACCESS_TOKEN_URL);
+                this.ServerEventClient.Post<NotifyResponse>(new NotifyUserIdRequest
                 {
-                    Console.WriteLine("----------------------------------------->Notified User of Upload :" + request.FileDetails.ObjectId + "\nBucket Name: " + request.BucketName);
+                    Msg = request.FileDetails,
+                    Selector = StaticFileConstants.UPLOADSUCCESS,
+                    ToUserAuthId = request.UserAuthId,
+                });
 
+                this.MessageProducer3.Publish(new FileMetaPersistRequest
+                {
+                    FileDetails = new FileMeta
+                    {
+                        ObjectId = request.FileDetails.ObjectId,
+                        FileName = request.FileDetails.FileName,
+                        MetaDataDictionary = (request.FileDetails.MetaDataDictionary != null) ? request.FileDetails.MetaDataDictionary : new Dictionary<String, List<string>>() { },
+                        Length = request.Byte.Length,
+                        FileType = request.FileDetails.FileType,
+                        FileCategory = request.FileDetails.FileCategory
+                    },
+                    TenantAccountId = request.TenantAccountId,
+                    UserId = request.UserId,
+                    BToken = request.BToken,
+                    RToken = request.RToken
+                });
+
+
+            }
+            catch (Exception e)
+            {
+                Log.Info("Exception:" + e.ToString());
+                return null;
+            }
+            return null;
+        }
+
+        public string Post(UploadImageRequest request)
+        {
+            Log.Info("Inside Upload Img MQ Service");
+
+            try
+            {
+                request.ImageInfo.ObjectId = (new EbConnectionFactory(request.TenantAccountId, this.Redis)).FilesDB.UploadFile(
+                    request.ImageInfo.FileName,
+                    request.ImageInfo.MetaDataDictionary.Count != 0 ? request.ImageInfo.MetaDataDictionary : new Dictionary<String, List<string>>() { },
+                    request.Byte,
+                    request.ImageInfo.FileCategory
+                    );
+                this.MessageProducer3.Publish(new FileMetaPersistRequest
+                {
+                    FileDetails = new FileMeta
+                    {
+                        ObjectId = request.ImageInfo.ObjectId,
+                        FileName = request.ImageInfo.FileName,
+                        MetaDataDictionary = (request.ImageInfo.MetaDataDictionary != null) ? request.ImageInfo.MetaDataDictionary : new Dictionary<String, List<string>>() { },
+                        Length = request.Byte.Length,
+                        FileType = request.ImageInfo.FileType,
+                        FileCategory = request.ImageInfo.FileCategory
+                    },
+                    TenantAccountId = request.TenantAccountId,
+                    UserId = request.UserId,
+                    BToken = request.BToken,
+                    RToken = request.RToken
+                });
+
+                if (request.ImageInfo.ImageQuality == ImageQuality.original) // Works properly if Soln id doesn't contains a "_"
+                {
                     this.ServerEventClient.BearerToken = request.BToken;
                     this.ServerEventClient.RefreshToken = request.RToken;
                     this.ServerEventClient.RefreshTokenUri = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_GET_ACCESS_TOKEN_URL);
                     this.ServerEventClient.Post<NotifyResponse>(new NotifyUserIdRequest
                     {
-                        Msg = request.FileDetails,
+                        Msg = request.ImageInfo,
                         Selector = StaticFileConstants.UPLOADSUCCESS,
                         ToUserAuthId = request.UserAuthId,
                     });
 
-                    this.MessageProducer3.Publish(new FileMetaPersistRequest
+                    this.MessageProducer3.Publish(new ImageResizeRequest
                     {
-                        FileDetails = new FileMeta
-                        {
-                            ObjectId = request.FileDetails.ObjectId,
-                            FileName = request.FileDetails.FileName,
-                            MetaDataDictionary = (request.FileDetails.MetaDataDictionary != null) ?
-                                                  request.FileDetails.MetaDataDictionary : new Dictionary<String, List<string>>() { },
-                            Length = request.FileByte.Length,
-                            FileType = request.FileDetails.FileType
-                        },
-                        BucketName = request.BucketName,
+                        ImageInfo = request.ImageInfo,
+                        ImageByte = request.Byte,
                         TenantAccountId = request.TenantAccountId,
-                        UserId = request.UserId
+                        UserId = request.UserId,
+                        BToken = request.BToken,
+                        RToken = request.RToken
                     });
-                    if (Enum.IsDefined(typeof(ImageTypes), request.FileDetails.FileType.ToString()))
-                        this.MessageProducer3.Publish(new ImageResizeRequest
-                        {
-                            ImageInfo = new FileMeta
-                            {
-                                ObjectId = request.FileDetails.ObjectId,
-                                FileName = request.FileDetails.FileName,
-                                MetaDataDictionary = (request.FileDetails.MetaDataDictionary != null) ?
-                            request.FileDetails.MetaDataDictionary :
-                            new Dictionary<String, List<string>>() { }
-                            },
-                            ImageByte = request.FileByte,
-                            TenantAccountId = request.TenantAccountId,
-                            UserId = request.UserId
-                        });
                 }
             }
             catch (Exception e)
@@ -96,9 +137,9 @@ namespace ExpressBase.MessageQueue.MQServices
 
         public string Post(ImageResizeRequest request)
         {
-            UploadFileRequest uploadFileRequest = new UploadFileRequest();
-            uploadFileRequest.TenantAccountId = request.TenantAccountId;
-            uploadFileRequest.UserId = request.UserId;
+            UploadImageRequest uploadImageRequest = new UploadImageRequest();
+            uploadImageRequest.TenantAccountId = request.TenantAccountId;
+            uploadImageRequest.UserId = request.UserId;
 
             MemoryStream ms = new MemoryStream(request.ImageByte);
             ms.Position = 0;
@@ -107,98 +148,102 @@ namespace ExpressBase.MessageQueue.MQServices
             {
                 using (Image img = Image.FromStream(ms))
                 {
-                    if (request.ImageInfo.FileName.StartsWith(StaticFileConstants.DP))
+                    if (request.ImageInfo.FileCategory == EbFileCategory.Dp)
                     {
                         foreach (string size in Enum.GetNames(typeof(DPSizes)))
                         {
-                            Stream ImgStream = Resize(img, (int)((DPSizes)Enum.Parse(typeof(DPSizes), size)), (int)((DPSizes)Enum.Parse(typeof(DPSizes), size)));
+                            int sz = (int)((DPSizes)Enum.Parse(typeof(DPSizes), size));
+
+                            Stream ImgStream = Resize(img, sz, sz);
                             request.ImageByte = new byte[ImgStream.Length];
                             ImgStream.Read(request.ImageByte, 0, request.ImageByte.Length);
 
-                            uploadFileRequest.FileByte = request.ImageByte;
-                            uploadFileRequest.BucketName = StaticFileConstants.DP_IMAGES;
-                            uploadFileRequest.FileDetails = new FileMeta()
+                            uploadImageRequest.Byte = request.ImageByte;
+                            uploadImageRequest.ImageInfo = new ImageMeta()
                             {
-                                FileName = String.Format("{0}_{1}.{2}", request.ImageInfo.FileName.Split(CharConstants.DOT)[0], ((DPSizes)Enum.Parse(typeof(DPSizes), size)).ToString(), request.ImageInfo.FileName.Split(CharConstants.DOT)[1]),
-                                MetaDataDictionary = (request.ImageInfo.MetaDataDictionary != null) ?
-                                    request.ImageInfo.MetaDataDictionary :
-                                    new Dictionary<String, List<string>>() { },
-                                FileType = request.ImageInfo.FileType
+                                FileName = String.Format("{0}_{1}.{2}", request.ImageInfo.ObjectId.ObjectId, size, request.ImageInfo.FileType),
+                                MetaDataDictionary = (request.ImageInfo.MetaDataDictionary != null) ? request.ImageInfo.MetaDataDictionary : new Dictionary<String, List<string>>() { },
+                                FileType = request.ImageInfo.FileType,
+                                FileCategory = EbFileCategory.Dp,
+                                ImageQuality = ImageQuality.other
                             };
-                            this.MessageProducer3.Publish(uploadFileRequest);
+                            uploadImageRequest.AddAuth(request.BToken, request.RToken);
+                            this.MessageProducer3.Publish(uploadImageRequest);
                         }
                     }
-                    else if (request.ImageInfo.FileName.StartsWith(StaticFileConstants.LOGO))
+                    else if (request.ImageInfo.FileCategory == EbFileCategory.SolLogo)
                     {
                         foreach (string size in Enum.GetNames(typeof(LogoSizes)))
                         {
-                            Stream ImgStream = Resize(img, (int)((LogoSizes)Enum.Parse(typeof(LogoSizes), size)), (int)((LogoSizes)Enum.Parse(typeof(LogoSizes), size)));
+                            int sz = (int)Enum.Parse<LogoSizes>(size);
+
+                            Stream ImgStream = Resize(img, sz, sz);
                             request.ImageByte = new byte[ImgStream.Length];
                             ImgStream.Read(request.ImageByte, 0, request.ImageByte.Length);
 
-                            uploadFileRequest.FileByte = request.ImageByte;
-                            uploadFileRequest.BucketName = StaticFileConstants.SOL_LOGOS;
-                            uploadFileRequest.FileDetails = new FileMeta()
+                            uploadImageRequest.Byte = request.ImageByte;
+                            uploadImageRequest.ImageInfo = new ImageMeta()
                             {
-                                FileName = String.Format("{0}_{1}.{2}",
-                                                request.ImageInfo.FileName.Split(CharConstants.DOT)[0],
-                                                ((LogoSizes)Enum.Parse(typeof(LogoSizes), size)).ToString(),
-                                                request.ImageInfo.FileName.Split(CharConstants.DOT)[1]),
-
-                                MetaDataDictionary = (request.ImageInfo.MetaDataDictionary != null) ?
-                                    request.ImageInfo.MetaDataDictionary :
-                                    new Dictionary<String, List<string>>() { },
-                                FileType = request.ImageInfo.FileType
+                                FileName = String.Format("{0}_{1}.{2}", request.ImageInfo.ObjectId.ObjectId, size, request.ImageInfo.FileType),
+                                MetaDataDictionary = (request.ImageInfo.MetaDataDictionary != null) ? request.ImageInfo.MetaDataDictionary : new Dictionary<String, List<string>>() { },
+                                FileType = request.ImageInfo.FileType,
+                                FileCategory = EbFileCategory.SolLogo,
+                                ImageQuality = ImageQuality.other
                             };
-                            this.MessageProducer3.Publish(uploadFileRequest);
+                            uploadImageRequest.AddAuth(request.BToken, request.RToken);
+                            this.MessageProducer3.Publish(uploadImageRequest);
                         }
                     }
-                    else if (request.ImageInfo.FileName.StartsWith(StaticFileConstants.LOCATION_DP))
+                    else if (request.ImageInfo.FileCategory == EbFileCategory.LocationFile)
                     {
                         foreach (string size in Enum.GetNames(typeof(LogoSizes)))
                         {
-                            Stream ImgStream = Resize(img, (int)((LogoSizes)Enum.Parse(typeof(LogoSizes), size)), (int)((LogoSizes)Enum.Parse(typeof(LogoSizes), size)));
+                            int sz = (int)Enum.Parse<LogoSizes>(size);
+
+                            Stream ImgStream = Resize(img, sz, sz);
                             request.ImageByte = new byte[ImgStream.Length];
                             ImgStream.Read(request.ImageByte, 0, request.ImageByte.Length);
 
-                            uploadFileRequest.FileByte = request.ImageByte;
-                            uploadFileRequest.BucketName = StaticFileConstants.LOCATION_IMAGES;
-                            uploadFileRequest.FileDetails = new FileMeta()
+                            uploadImageRequest.Byte = request.ImageByte;
+                            uploadImageRequest.ImageInfo = new ImageMeta()
                             {
-                                FileName = String.Format("{0}_{1}.{2}",
-                                                request.ImageInfo.FileName.Split(CharConstants.DOT)[0],
-                                                ((LogoSizes)Enum.Parse(typeof(LogoSizes), size)).ToString(),
-                                                request.ImageInfo.FileName.Split(CharConstants.DOT)[1]),
-
-                                MetaDataDictionary = (request.ImageInfo.MetaDataDictionary != null) ?
-                                    request.ImageInfo.MetaDataDictionary :
-                                    new Dictionary<String, List<string>>() { },
-                                FileType = request.ImageInfo.FileType
+                                FileName = String.Format("{0}_{1}.{2}", request.ImageInfo.ObjectId.ObjectId, size, request.ImageInfo.FileType),
+                                MetaDataDictionary = (request.ImageInfo.MetaDataDictionary != null) ? request.ImageInfo.MetaDataDictionary : new Dictionary<String, List<string>>() { },
+                                FileType = request.ImageInfo.FileType,
+                                FileCategory = EbFileCategory.LocationFile
                             };
-                            this.MessageProducer3.Publish(uploadFileRequest);
+
+                            uploadImageRequest.AddAuth(request.BToken, request.RToken);
+                            this.MessageProducer3.Publish(uploadImageRequest);
                         }
                     }
                     else
                     {
-                        foreach (string size in Enum.GetNames(typeof(ImageSizes)))
+                        foreach (string size in Enum.GetNames(typeof(ImageQuality)))
                         {
-                            Stream ImgStream = Resize(img, (int)((ImageSizes)Enum.Parse(typeof(ImageSizes), size)), (int)((ImageSizes)Enum.Parse(typeof(ImageSizes), size)));
 
-                            request.ImageByte = new byte[ImgStream.Length];
-                            ImgStream.Read(request.ImageByte, 0, request.ImageByte.Length);
+                            int sz = (int)Enum.Parse<ImageQuality>(size);
 
-                            uploadFileRequest.FileDetails = new FileMeta()
+                            if (sz > 1)
                             {
-                                FileName = request.ImageInfo.ObjectId + CharConstants.UNDERSCORE + size + StaticFileConstants.DOTPNG,
-                                MetaDataDictionary = (request.ImageInfo.MetaDataDictionary != null) ?
-                                    request.ImageInfo.MetaDataDictionary :
-                                    new Dictionary<String, List<string>>() { },
-                                FileType = StaticFileConstants.PNG
-                            };
-                            uploadFileRequest.FileByte = request.ImageByte;
-                            uploadFileRequest.BucketName = string.Format("{0}_{1}", StaticFileConstants.IMAGES, size);
+                                Stream ImgStream = Resize(img, sz, sz);
 
-                            this.MessageProducer3.Publish(uploadFileRequest);
+                                request.ImageByte = new byte[ImgStream.Length];
+                                ImgStream.Read(request.ImageByte, 0, request.ImageByte.Length);
+
+                                uploadImageRequest.ImageInfo = new ImageMeta()
+                                {
+                                    FileName = String.Format("{0}_{1}.{2}", request.ImageInfo.ObjectId.ObjectId, size, request.ImageInfo.FileType),
+                                    MetaDataDictionary = (request.ImageInfo.MetaDataDictionary != null) ? request.ImageInfo.MetaDataDictionary : new Dictionary<String, List<string>>() { },
+                                    FileType = request.ImageInfo.FileType,
+                                    FileCategory = EbFileCategory.Images,
+                                    ImageQuality = Enum.Parse<ImageQuality>(size)
+                                };
+                                uploadImageRequest.Byte = request.ImageByte;
+
+                                uploadImageRequest.AddAuth(request.BToken, request.RToken);
+                                this.MessageProducer3.Publish(uploadImageRequest);
+                            }
                         }
                     }
                 }
@@ -221,15 +266,16 @@ namespace ExpressBase.MessageQueue.MQServices
 
             EbConnectionFactory connectionFactory = new EbConnectionFactory(request.TenantAccountId, this.Redis);
 
-            string sql = "INSERT INTO eb_files(userid, objid, length, filetype, tags, bucketname, uploaddatetime) VALUES(@userid, @objid, @length, @filetype, @tags, @bucketname, CURRENT_TIMESTAMP) RETURNING id";
+            string sql = "INSERT INTO eb_files(filename, userid, objid, length, filetype, tags, bucketname, uploaddatetime) VALUES(@filename, @userid, @objid, @length, @filetype, @tags, @bucketname, CURRENT_TIMESTAMP) RETURNING id";
             DbParameter[] parameters =
             {
                         connectionFactory.DataDB.GetNewParameter("userid", EbDbTypes.Int32, request.UserId),
-                        connectionFactory.DataDB.GetNewParameter("objid",EbDbTypes.String, request.FileDetails.ObjectId),
+                        connectionFactory.DataDB.GetNewParameter("objid",EbDbTypes.String, request.FileDetails.ObjectId.ObjectId),
+                        connectionFactory.DataDB.GetNewParameter("filename",EbDbTypes.String, request.FileDetails.FileName),
                         connectionFactory.DataDB.GetNewParameter("length",EbDbTypes.Int64, request.FileDetails.Length),
                         connectionFactory.DataDB.GetNewParameter("filetype",EbDbTypes.String, (String.IsNullOrEmpty(request.FileDetails.FileType))? StaticFileConstants.PNG : request.FileDetails.FileType),
                         connectionFactory.DataDB.GetNewParameter("tags",EbDbTypes.String, tag),
-                        connectionFactory.DataDB.GetNewParameter("bucketname",EbDbTypes.String, request.BucketName)
+                        connectionFactory.DataDB.GetNewParameter("bucketname",EbDbTypes.String, request.FileDetails.FileCategory.ToString())
             };
             var iCount = connectionFactory.DataDB.DoQuery(sql, parameters);
 
