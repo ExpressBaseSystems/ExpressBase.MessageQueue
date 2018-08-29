@@ -31,7 +31,7 @@ namespace ExpressBase.MessageQueue.MQServices
 
             try
             {
-                request.FileDetails.ObjectId = (new EbConnectionFactory(request.TenantAccountId, this.Redis)).FilesDB.UploadFile(
+                request.FileDetails.FileStoreId = (new EbConnectionFactory(request.TenantAccountId, this.Redis)).FilesDB.UploadFile(
                     request.FileDetails.FileName,
                     request.FileDetails.MetaDataDictionary.Count != 0 ? request.FileDetails.MetaDataDictionary : new Dictionary<String, List<string>>() { },
                     request.Byte,
@@ -52,12 +52,13 @@ namespace ExpressBase.MessageQueue.MQServices
                 {
                     FileDetails = new FileMeta
                     {
-                        ObjectId = request.FileDetails.ObjectId,
+                        FileStoreId = request.FileDetails.FileStoreId,
                         FileName = request.FileDetails.FileName,
                         MetaDataDictionary = (request.FileDetails.MetaDataDictionary != null) ? request.FileDetails.MetaDataDictionary : new Dictionary<String, List<string>>() { },
                         Length = request.Byte.Length,
                         FileType = request.FileDetails.FileType,
-                        FileCategory = request.FileDetails.FileCategory
+                        FileCategory = request.FileDetails.FileCategory,
+                        FileRefId = request.FileDetails.FileRefId
                     },
                     TenantAccountId = request.TenantAccountId,
                     UserId = request.UserId,
@@ -78,34 +79,21 @@ namespace ExpressBase.MessageQueue.MQServices
         public string Post(UploadImageRequest request)
         {
             Log.Info("Inside Upload Img MQ Service");
+            Log.Info("SolnId: " + request.TenantAccountId+ "Redis" + this.Redis.ToJson());
 
             try
             {
-                request.ImageInfo.ObjectId = (new EbConnectionFactory(request.TenantAccountId, this.Redis)).FilesDB.UploadFile(
+                request.ImageInfo.FileStoreId = (new EbConnectionFactory(request.TenantAccountId, this.Redis)).FilesDB.UploadFile(
                     request.ImageInfo.FileName,
                     request.ImageInfo.MetaDataDictionary.Count != 0 ? request.ImageInfo.MetaDataDictionary : new Dictionary<String, List<string>>() { },
                     request.Byte,
                     request.ImageInfo.FileCategory
                     );
-                this.MessageProducer3.Publish(new FileMetaPersistRequest
-                {
-                    FileDetails = new FileMeta
-                    {
-                        ObjectId = request.ImageInfo.ObjectId,
-                        FileName = request.ImageInfo.FileName,
-                        MetaDataDictionary = (request.ImageInfo.MetaDataDictionary != null) ? request.ImageInfo.MetaDataDictionary : new Dictionary<String, List<string>>() { },
-                        Length = request.Byte.Length,
-                        FileType = request.ImageInfo.FileType,
-                        FileCategory = request.ImageInfo.FileCategory
-                    },
-                    TenantAccountId = request.TenantAccountId,
-                    UserId = request.UserId,
-                    BToken = request.BToken,
-                    RToken = request.RToken
-                });
+
 
                 if (request.ImageInfo.ImageQuality == ImageQuality.original) // Works properly if Soln id doesn't contains a "_"
                 {
+                    
                     this.ServerEventClient.BearerToken = request.BToken;
                     this.ServerEventClient.RefreshToken = request.RToken;
                     this.ServerEventClient.RefreshTokenUri = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_GET_ACCESS_TOKEN_URL);
@@ -114,6 +102,24 @@ namespace ExpressBase.MessageQueue.MQServices
                         Msg = request.ImageInfo,
                         Selector = StaticFileConstants.UPLOADSUCCESS,
                         ToUserAuthId = request.UserAuthId,
+                    });
+
+                    this.MessageProducer3.Publish(new FileMetaPersistRequest
+                    {
+                        FileDetails = new FileMeta
+                        {
+                            FileStoreId = request.ImageInfo.FileStoreId,
+                            FileName = request.ImageInfo.FileName,
+                            MetaDataDictionary = (request.ImageInfo.MetaDataDictionary != null) ? request.ImageInfo.MetaDataDictionary : new Dictionary<String, List<string>>() { },
+                            Length = request.Byte.Length,
+                            FileType = request.ImageInfo.FileType,
+                            FileCategory = request.ImageInfo.FileCategory,
+                            FileRefId = request.ImageInfo.FileRefId
+                        },
+                        TenantAccountId = request.TenantAccountId,
+                        UserId = request.UserId,
+                        BToken = request.BToken,
+                        RToken = request.RToken
                     });
 
                     this.MessageProducer3.Publish(new ImageResizeRequest
@@ -161,7 +167,7 @@ namespace ExpressBase.MessageQueue.MQServices
                             uploadImageRequest.Byte = request.ImageByte;
                             uploadImageRequest.ImageInfo = new ImageMeta()
                             {
-                                FileName = String.Format("{0}_{1}.{2}", request.ImageInfo.ObjectId.ObjectId, size, request.ImageInfo.FileType),
+                                FileName = String.Format("{0}_{1}.{2}", request.ImageInfo.FileStoreId, size, request.ImageInfo.FileType),
                                 MetaDataDictionary = (request.ImageInfo.MetaDataDictionary != null) ? request.ImageInfo.MetaDataDictionary : new Dictionary<String, List<string>>() { },
                                 FileType = request.ImageInfo.FileType,
                                 FileCategory = EbFileCategory.Dp,
@@ -184,7 +190,7 @@ namespace ExpressBase.MessageQueue.MQServices
                             uploadImageRequest.Byte = request.ImageByte;
                             uploadImageRequest.ImageInfo = new ImageMeta()
                             {
-                                FileName = String.Format("{0}_{1}.{2}", request.ImageInfo.ObjectId.ObjectId, size, request.ImageInfo.FileType),
+                                FileName = String.Format("{0}_{1}.{2}", request.ImageInfo.FileStoreId, size, request.ImageInfo.FileType),
                                 MetaDataDictionary = (request.ImageInfo.MetaDataDictionary != null) ? request.ImageInfo.MetaDataDictionary : new Dictionary<String, List<string>>() { },
                                 FileType = request.ImageInfo.FileType,
                                 FileCategory = EbFileCategory.SolLogo,
@@ -207,7 +213,7 @@ namespace ExpressBase.MessageQueue.MQServices
                             uploadImageRequest.Byte = request.ImageByte;
                             uploadImageRequest.ImageInfo = new ImageMeta()
                             {
-                                FileName = String.Format("{0}_{1}.{2}", request.ImageInfo.ObjectId.ObjectId, size, request.ImageInfo.FileType),
+                                FileName = String.Format("{0}_{1}.{2}", request.ImageInfo.FileStoreId, size, request.ImageInfo.FileType),
                                 MetaDataDictionary = (request.ImageInfo.MetaDataDictionary != null) ? request.ImageInfo.MetaDataDictionary : new Dictionary<String, List<string>>() { },
                                 FileType = request.ImageInfo.FileType,
                                 FileCategory = EbFileCategory.LocationFile
@@ -233,7 +239,7 @@ namespace ExpressBase.MessageQueue.MQServices
 
                                 uploadImageRequest.ImageInfo = new ImageMeta()
                                 {
-                                    FileName = String.Format("{0}_{1}.{2}", request.ImageInfo.ObjectId.ObjectId, size, request.ImageInfo.FileType),
+                                    FileName = String.Format("{0}_{1}.{2}", request.ImageInfo.FileStoreId, size, request.ImageInfo.FileType),
                                     MetaDataDictionary = (request.ImageInfo.MetaDataDictionary != null) ? request.ImageInfo.MetaDataDictionary : new Dictionary<String, List<string>>() { },
                                     FileType = request.ImageInfo.FileType,
                                     FileCategory = EbFileCategory.Images,
@@ -266,16 +272,17 @@ namespace ExpressBase.MessageQueue.MQServices
 
             EbConnectionFactory connectionFactory = new EbConnectionFactory(request.TenantAccountId, this.Redis);
 
-            string sql = "INSERT INTO eb_files(filename, userid, objid, length, filetype, tags, bucketname, uploaddatetime) VALUES(@filename, @userid, @objid, @length, @filetype, @tags, @bucketname, CURRENT_TIMESTAMP) RETURNING id";
+            string sql = "UPDATE eb_files_ref SET (filename, userid, filestore_id, length, filetype, tags, filecategory, uploadts) = (@filename, @userid, @filestoreid, @length, @filetype, @tags, @filecategory, CURRENT_TIMESTAMP) WHERE id = @refid RETURNING id";
             DbParameter[] parameters =
             {
                         connectionFactory.DataDB.GetNewParameter("userid", EbDbTypes.Int32, request.UserId),
-                        connectionFactory.DataDB.GetNewParameter("objid",EbDbTypes.String, request.FileDetails.ObjectId.ObjectId),
+                        connectionFactory.DataDB.GetNewParameter("filestoreid",EbDbTypes.String, request.FileDetails.FileStoreId),
+                        connectionFactory.DataDB.GetNewParameter("refid",EbDbTypes.Int32, request.FileDetails.FileRefId),
                         connectionFactory.DataDB.GetNewParameter("filename",EbDbTypes.String, request.FileDetails.FileName),
                         connectionFactory.DataDB.GetNewParameter("length",EbDbTypes.Int64, request.FileDetails.Length),
                         connectionFactory.DataDB.GetNewParameter("filetype",EbDbTypes.String, (String.IsNullOrEmpty(request.FileDetails.FileType))? StaticFileConstants.PNG : request.FileDetails.FileType),
                         connectionFactory.DataDB.GetNewParameter("tags",EbDbTypes.String, tag),
-                        connectionFactory.DataDB.GetNewParameter("bucketname",EbDbTypes.String, request.FileDetails.FileCategory.ToString())
+                        connectionFactory.DataDB.GetNewParameter("filecategory",EbDbTypes.Int16, request.FileDetails.FileCategory)
             };
             var iCount = connectionFactory.DataDB.DoQuery(sql, parameters);
 
