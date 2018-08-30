@@ -35,64 +35,45 @@ namespace ExpressBase.MessageQueue.MQServices
             FtpWebRequest req;
             FtpWebResponse response;
 
-            if (request.FileUrls.Count > 0)
+            try
             {
-                int count = 0, iter = 0;
-                foreach (KeyValuePair<int, string> file in request.FileUrls)
-                {
-                    iter++;
-                    if (!file.Value.Equals(string.Empty))
-                    {
-                        try
-                        {
-                            Console.WriteLine(iter.ToString() + ". FileName: " + file.Value);
-                            req = (FtpWebRequest)WebRequest.Create(file.Value);//fullpath + name);
-                            req.Method = WebRequestMethods.Ftp.DownloadFile;
-                            req.Credentials = new NetworkCredential(UserName, Password);
-                            response = (FtpWebResponse)req.GetResponse();
-                            Stream responseStream = response.GetResponseStream();
-                            byte[] FileContents = new byte[response.ContentLength];
-                            if (FileContents.Length == 0)
-                                throw new Exception("File returned empty");
-                            responseStream.ReadAsync(FileContents, 0, FileContents.Length);
+                req = (FtpWebRequest)WebRequest.Create(request.FileUrl.Value);//fullpath + name);
+                req.Method = WebRequestMethods.Ftp.DownloadFile;
+                req.Credentials = new NetworkCredential(UserName, Password);
+                response = (FtpWebResponse)req.GetResponse();
+                Stream responseStream = response.GetResponseStream();
+                byte[] FileContents = new byte[response.ContentLength];
+                if (FileContents.Length == 0)
+                    throw new Exception("File returned empty");
+                responseStream.ReadAsync(FileContents, 0, FileContents.Length);
 
-                            UploadImageRequest imgupreq = new UploadImageRequest();
-                            imgupreq.Byte = FileContents;
-                            imgupreq.ImageInfo = new ImageMeta();
-                            imgupreq.ImageInfo.FileCategory = EbFileCategory.Images;
-                            imgupreq.ImageInfo.FileName = file.Value;
-                            imgupreq.ImageInfo.FileType = file.Value.Split('.').Last();
-                            imgupreq.ImageInfo.ImageQuality = ImageQuality.original;
-                            imgupreq.ImageInfo.Length = FileContents.Length;
-                            imgupreq.ImageInfo.MetaDataDictionary = new Dictionary<string, List<string>>();
-                            imgupreq.ImageInfo.FileRefId = GetFileRefId();
-                            imgupreq.TenantAccountId = request.TenantAccountId;
-                            imgupreq.UserId = request.UserId;
-                            imgupreq.BToken = request.BToken;
-                            imgupreq.RToken = request.RToken;
+                UploadImageRequest imgupreq = new UploadImageRequest();
+                imgupreq.Byte = FileContents;
+                imgupreq.ImageInfo = new ImageMeta();
+                imgupreq.ImageInfo.FileCategory = EbFileCategory.Images;
+                imgupreq.ImageInfo.FileName = request.FileUrl.Value;
+                imgupreq.ImageInfo.FileType = request.FileUrl.Value.Split('.').Last();
+                imgupreq.ImageInfo.ImageQuality = ImageQuality.original;
+                imgupreq.ImageInfo.Length = FileContents.Length;
+                imgupreq.ImageInfo.MetaDataDictionary = new Dictionary<string, List<string>>();
+                imgupreq.ImageInfo.FileRefId = GetFileRefId();
+                imgupreq.TenantAccountId = request.TenantAccountId;
+                imgupreq.UserId = request.UserId;
+                imgupreq.BToken = request.BToken;
+                imgupreq.RToken = request.RToken;
 
 
-                            if (MapFilesWithUser(file.Key, imgupreq.ImageInfo.FileRefId) < 1)
-                                throw new Exception("File Mapping Failed");
-                            this.MessageProducer3.Publish(imgupreq);
-                            Console.WriteLine("..........Success.........." + iter.ToString() + ". FileName: " + file.Value);
-                            response.Close();
+                if (MapFilesWithUser(request.FileUrl.Key, imgupreq.ImageInfo.FileRefId) < 1)
+                    throw new Exception("File Mapping Failed");
+                this.MessageProducer3.Publish(imgupreq);
+                Console.WriteLine("----------------------------------------Success-------------------------------------------------------------");
+                response.Close();
 
-                            if (count > 10)
-                                break;
-                            else
-                                count++;
-                        }
-                        catch (Exception ex)
-                        {
-                            continue;
-                        }
-                    }
-                }
+                
             }
-            else
+            catch (Exception ex)
             {
-                Console.WriteLine("There were no files in that directory!\n\n");
+                //Console.WriteLine("Exception: " + ex.Message);
             }
             return null;
         }
