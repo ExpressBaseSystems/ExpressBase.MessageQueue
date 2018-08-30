@@ -243,7 +243,8 @@ namespace ExpressBase.MessageQueue.MQServices
                                     MetaDataDictionary = (request.ImageInfo.MetaDataDictionary != null) ? request.ImageInfo.MetaDataDictionary : new Dictionary<String, List<string>>() { },
                                     FileType = request.ImageInfo.FileType,
                                     FileCategory = EbFileCategory.Images,
-                                    ImageQuality = Enum.Parse<ImageQuality>(size)
+                                    ImageQuality = Enum.Parse<ImageQuality>(size),
+                                    FileRefId = request.ImageInfo.FileRefId // Not needed resized images are not updated in eb_files_ref
                                 };
                                 uploadImageRequest.Byte = request.ImageByte;
 
