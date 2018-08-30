@@ -117,6 +117,7 @@ namespace ExpressBase.MessageQueue
             var mqServer = new RabbitMqServer(rabitFactory);
             mqServer.RetryCount = 1;
             mqServer.RegisterHandler<RefreshSolutionConnectionsRequest>(base.ExecuteMessage);
+            mqServer.RegisterHandler<GetImageFtpRequest>(base.ExecuteMessage, 20);
             mqServer.RegisterHandler<UploadImageRequest>(base.ExecuteMessage);
             mqServer.RegisterHandler<UploadFileRequest>(base.ExecuteMessage);
             mqServer.RegisterHandler<ImageResizeRequest>(base.ExecuteMessage);

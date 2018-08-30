@@ -15,6 +15,8 @@ using System.Data.Common;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
+using System.Linq;
+using System.Net;
 
 namespace ExpressBase.MessageQueue.MQServices
 {
@@ -23,6 +25,76 @@ namespace ExpressBase.MessageQueue.MQServices
     {
         public FileServiceInternal(IMessageProducer _mqp, IMessageQueueClient _mqc, IEbServerEventClient _sec) : base(_mqp, _mqc, _sec)
         {
+        }
+
+        public string Post(GetImageFtpRequest request)
+        {
+            string Host = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_FTP_HOST);
+            string UserName = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_FTP_USER);
+            string Password = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_FTP_PASSWORD);
+            FtpWebRequest req;
+            FtpWebResponse response;
+
+            if (request.FileUrls.Count > 0)
+            {
+                int count = 0, iter = 0;
+                foreach (KeyValuePair<int, string> file in request.FileUrls)
+                {
+                    iter++;
+                    if (!file.Value.Equals(string.Empty))
+                    {
+                        try
+                        {
+                            Console.WriteLine(iter.ToString() + ". FileName: " + file.Value);
+                            req = (FtpWebRequest)WebRequest.Create(file.Value);//fullpath + name);
+                            req.Method = WebRequestMethods.Ftp.DownloadFile;
+                            req.Credentials = new NetworkCredential(UserName, Password);
+                            response = (FtpWebResponse)req.GetResponse();
+                            Stream responseStream = response.GetResponseStream();
+                            byte[] FileContents = new byte[response.ContentLength];
+                            if (FileContents.Length == 0)
+                                throw new Exception("File returned empty");
+                            responseStream.ReadAsync(FileContents, 0, FileContents.Length);
+
+                            UploadImageRequest imgupreq = new UploadImageRequest();
+                            imgupreq.Byte = FileContents;
+                            imgupreq.ImageInfo = new ImageMeta();
+                            imgupreq.ImageInfo.FileCategory = EbFileCategory.Images;
+                            imgupreq.ImageInfo.FileName = file.Value;
+                            imgupreq.ImageInfo.FileType = file.Value.Split('.').Last();
+                            imgupreq.ImageInfo.ImageQuality = ImageQuality.original;
+                            imgupreq.ImageInfo.Length = FileContents.Length;
+                            imgupreq.ImageInfo.MetaDataDictionary = new Dictionary<string, List<string>>();
+                            imgupreq.ImageInfo.FileRefId = GetFileRefId();
+                            imgupreq.TenantAccountId = request.TenantAccountId;
+                            imgupreq.UserId = request.UserId;
+                            imgupreq.BToken = request.BToken;
+                            imgupreq.RToken = request.RToken;
+
+
+                            if (MapFilesWithUser(file.Key, imgupreq.ImageInfo.FileRefId) < 1)
+                                throw new Exception("File Mapping Failed");
+                            this.MessageProducer3.Publish(imgupreq);
+                            Console.WriteLine("..........Success.........." + iter.ToString() + ". FileName: " + file.Value);
+                            response.Close();
+
+                            if (count > 10)
+                                break;
+                            else
+                                count++;
+                        }
+                        catch (Exception ex)
+                        {
+                            continue;
+                        }
+                    }
+                }
+            }
+            else
+            {
+                Console.WriteLine("There were no files in that directory!\n\n");
+            }
+            return null;
         }
 
         public string Post(UploadFileRequest request)
@@ -92,7 +164,7 @@ namespace ExpressBase.MessageQueue.MQServices
 
                 if (request.ImageInfo.ImageQuality == ImageQuality.original) // Works properly if Soln id doesn't contains a "_"
                 {
-                    
+
                     this.ServerEventClient.BearerToken = request.BToken;
                     this.ServerEventClient.RefreshToken = request.RToken;
                     this.ServerEventClient.RefreshTokenUri = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_GET_ACCESS_TOKEN_URL);
@@ -134,7 +206,7 @@ namespace ExpressBase.MessageQueue.MQServices
             }
             catch (Exception e)
             {
-                Log.Info("Exception:" + e.ToString() + "\n \nStackTrace: "+ e.StackTrace);
+                Log.Info("Exception:" + e.ToString() + "\n \nStackTrace: " + e.StackTrace);
                 return null;
             }
             return null;
@@ -308,6 +380,28 @@ namespace ExpressBase.MessageQueue.MQServices
             img.Save(ms, ImageFormat.Png);
             ms.Position = 0;
             return ms;
+        }
+
+        private int GetFileRefId()
+        {
+            string IdFetchQuery = @"INSERT into eb_files_ref(userid, filename) VALUES (1, 'test') RETURNING id";
+            var table = this.EbConnectionFactory.ObjectsDB.DoQuery(IdFetchQuery);
+            int Id = (int)table.Rows[0][0];
+            return Id;
+        }
+
+        private int MapFilesWithUser(int CustomerId, int FileRefId)
+        {
+            int res = 0;
+            string MapQuery = @"INSERT into customer_files(customer_id, eb_files_ref_id) values(customer_id=@cust_id, eb_files_ref_id=@ref_id) returning id";
+            DbParameter[] MapParams =
+            {
+                        this.InfraConnectionFactory.DataDB.GetNewParameter("cust_id", EbDbTypes.Int32, CustomerId),
+                        this.InfraConnectionFactory.DataDB.GetNewParameter("ref_id", EbDbTypes.Int32, FileRefId)
+            };
+            var table = this.EbConnectionFactory.ObjectsDB.DoQuery(MapQuery);
+            res = (int)table.Rows[0][0];
+            return res;
         }
     }
 }
