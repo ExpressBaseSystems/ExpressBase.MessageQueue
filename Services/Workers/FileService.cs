@@ -73,7 +73,7 @@ namespace ExpressBase.MessageQueue.MQServices
             }
             catch (Exception ex)
             {
-                //Console.WriteLine("Exception: " + ex.Message);
+                Console.WriteLine("Exception" + ex.Message);
             }
             return null;
         }
