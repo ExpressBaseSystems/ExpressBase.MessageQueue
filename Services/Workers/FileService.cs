@@ -135,12 +135,12 @@ namespace ExpressBase.MessageQueue.MQServices
 
             try
             {
-                request.ImageInfo.FileStoreId = (new EbConnectionFactory(request.TenantAccountId, this.Redis)).FilesDB.UploadFile(
-                    request.ImageInfo.FileName,
-                    (request.ImageInfo.MetaDataDictionary != null) ? request.ImageInfo.MetaDataDictionary : new Dictionary<String, List<string>>() { },
-                    request.Byte,
-                    request.ImageInfo.FileCategory
-                    );
+                //request.ImageInfo.FileStoreId = (new EbConnectionFactory(request.TenantAccountId, this.Redis)).FilesDB.UploadFile(
+                //    request.ImageInfo.FileName,
+                //    (request.ImageInfo.MetaDataDictionary != null) ? request.ImageInfo.MetaDataDictionary : new Dictionary<String, List<string>>() { },
+                //    request.Byte,
+                //    request.ImageInfo.FileCategory
+                //    );
 
 
                 if (request.ImageInfo.ImageQuality == ImageQuality.original) // Works properly if Soln id doesn't contains a "_"
