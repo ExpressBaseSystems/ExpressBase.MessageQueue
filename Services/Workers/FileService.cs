@@ -32,8 +32,8 @@ namespace ExpressBase.MessageQueue.MQServices
             string Host = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_FTP_HOST);
             string UserName = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_FTP_USER);
             string Password = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_FTP_PASSWORD);
-            FtpWebRequest req;
-            FtpWebResponse response;
+            FtpWebRequest req = null;
+            FtpWebResponse response = null;
 
             try
             {
@@ -71,9 +71,12 @@ namespace ExpressBase.MessageQueue.MQServices
 
                 
             }
-            catch (Exception ex)
+            catch (WebException ex)
             {
-                Console.WriteLine("Exception" + ex.Message);
+                if ((response != null) && response.StatusCode == (FtpStatusCode)550)
+                            Console.WriteLine("FileNotFound: " + request.FileUrl.Value);
+                else
+                    Console.WriteLine("Exception in FileName: " + request.FileUrl.Value);
             }
             return null;
         }
