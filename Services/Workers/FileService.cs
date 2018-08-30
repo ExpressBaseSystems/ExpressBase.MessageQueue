@@ -33,7 +33,7 @@ namespace ExpressBase.MessageQueue.MQServices
             {
                 request.FileDetails.FileStoreId = (new EbConnectionFactory(request.TenantAccountId, this.Redis)).FilesDB.UploadFile(
                     request.FileDetails.FileName,
-                    request.FileDetails.MetaDataDictionary.Count != 0 ? request.FileDetails.MetaDataDictionary : new Dictionary<String, List<string>>() { },
+                    (request.FileDetails.MetaDataDictionary != null) ? request.FileDetails.MetaDataDictionary : new Dictionary<String, List<string>>() { },
                     request.Byte,
                     request.FileDetails.FileCategory
                     );
@@ -84,7 +84,7 @@ namespace ExpressBase.MessageQueue.MQServices
             {
                 request.ImageInfo.FileStoreId = (new EbConnectionFactory(request.TenantAccountId, this.Redis)).FilesDB.UploadFile(
                     request.ImageInfo.FileName,
-                    request.ImageInfo.MetaDataDictionary.Count != 0 ? request.ImageInfo.MetaDataDictionary : new Dictionary<String, List<string>>() { },
+                    (request.ImageInfo.MetaDataDictionary != null) ? request.ImageInfo.MetaDataDictionary : new Dictionary<String, List<string>>() { },
                     request.Byte,
                     request.ImageInfo.FileCategory
                     );
@@ -264,7 +264,7 @@ namespace ExpressBase.MessageQueue.MQServices
         public string Post(FileMetaPersistRequest request)
         {
             string tag = string.Empty;
-            if (request.FileDetails.MetaDataDictionary.Count != 0)
+            if (request.FileDetails.MetaDataDictionary != null)
                 foreach (var items in request.FileDetails.MetaDataDictionary)
                 {
                     tag = string.Join(CharConstants.COMMA, items.Value);
