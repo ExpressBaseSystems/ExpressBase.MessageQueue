@@ -41,6 +41,9 @@ namespace ExpressBase.MessageQueue.MQServices
                 req.Method = WebRequestMethods.Ftp.DownloadFile;
                 req.Credentials = new NetworkCredential(UserName, Password);
                 response = (FtpWebResponse)req.GetResponse();
+                Console.WriteLine("File Recieved : " + request.FileUrl.Value);
+                Console.WriteLine("File Recieved : " + request.FileUrl.Value);
+                Console.WriteLine("File Recieved : " + request.FileUrl.Value);
                 Stream responseStream = response.GetResponseStream();
                 byte[] FileContents = new byte[response.ContentLength];
                 if (FileContents.Length == 0)
@@ -69,12 +72,12 @@ namespace ExpressBase.MessageQueue.MQServices
                 Console.WriteLine("----------------------------------------Success-------------------------------------------------------------");
                 response.Close();
 
-                
+
             }
             catch (WebException ex)
             {
                 if ((response != null) && response.StatusCode == (FtpStatusCode)550)
-                            Console.WriteLine("FileNotFound: " + request.FileUrl.Value);
+                    Console.WriteLine("FileNotFound: " + request.FileUrl.Value);
                 else
                     Console.WriteLine("Exception in FileName: " + request.FileUrl.Value);
             }
