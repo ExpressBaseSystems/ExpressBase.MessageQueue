@@ -79,7 +79,6 @@ namespace ExpressBase.MessageQueue.MQServices
         public string Post(UploadImageRequest request)
         {
             Log.Info("Inside Upload Img MQ Service");
-            Log.Info("SolnId: " + request.TenantAccountId+ "Redis" + this.Redis.ToJson());
 
             try
             {
@@ -135,7 +134,7 @@ namespace ExpressBase.MessageQueue.MQServices
             }
             catch (Exception e)
             {
-                Log.Info("Exception:" + e.ToString());
+                Log.Info("Exception:" + e.ToString() + "\n \nStackTrace: "+ e.StackTrace);
                 return null;
             }
             return null;
