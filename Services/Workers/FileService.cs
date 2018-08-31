@@ -34,10 +34,9 @@ namespace ExpressBase.MessageQueue.MQServices
             string Password = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_FTP_PASSWORD);
             FtpWebRequest req = null;
             FtpWebResponse response = null;
-            System.Web.HttpUtility.UrlPathEncode(request.FileUrl.Value);
             try
             {
-                req = (FtpWebRequest)WebRequest.Create(System.Web.HttpUtility.UrlPathEncode(request.FileUrl.Value));//fullpath + name);
+                req = (FtpWebRequest)WebRequest.Create(request.FileUrl.Value);//fullpath + name);
                 req.Method = WebRequestMethods.Ftp.DownloadFile;
                 req.Credentials = new NetworkCredential(UserName, Password);
 
