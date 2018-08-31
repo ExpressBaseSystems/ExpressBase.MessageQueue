@@ -118,10 +118,10 @@ namespace ExpressBase.MessageQueue
             mqServer.RetryCount = 1;
             mqServer.RegisterHandler<RefreshSolutionConnectionsRequest>(base.ExecuteMessage);
             mqServer.RegisterHandler<GetImageFtpRequest>(base.ExecuteMessage, 20);
-            mqServer.RegisterHandler<UploadImageRequest>(base.ExecuteMessage);
+            mqServer.RegisterHandler<UploadImageRequest>(base.ExecuteMessage, 10);
             mqServer.RegisterHandler<UploadFileRequest>(base.ExecuteMessage);
-            mqServer.RegisterHandler<ImageResizeRequest>(base.ExecuteMessage);
-            mqServer.RegisterHandler<FileMetaPersistRequest>(base.ExecuteMessage);
+            mqServer.RegisterHandler<ImageResizeRequest>(base.ExecuteMessage, 5);
+            mqServer.RegisterHandler<FileMetaPersistRequest>(base.ExecuteMessage, 5);
             //mqServer.RegisterHandler<EmailServicesMqRequest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<SMSSentMqRequest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<SMSStatusLogMqRequest>(base.ExecuteMessage);
