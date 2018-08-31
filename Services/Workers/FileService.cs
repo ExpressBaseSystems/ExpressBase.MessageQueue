@@ -29,6 +29,8 @@ namespace ExpressBase.MessageQueue.MQServices
 
         public string Post(GetImageFtpRequest request)
         {
+            EbConnectionFactory _ebConnectionFactory = new EbConnectionFactory(request.TenantAccountId, this.Redis);
+
             string Host = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_FTP_HOST);
             string UserName = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_FTP_USER);
             string Password = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_FTP_PASSWORD);
@@ -58,13 +60,11 @@ namespace ExpressBase.MessageQueue.MQServices
                 imgupreq.ImageInfo.ImageQuality = ImageQuality.original;
                 imgupreq.ImageInfo.Length = FileContents.Length;
                 imgupreq.ImageInfo.MetaDataDictionary = new Dictionary<string, List<string>>();
-                imgupreq.ImageInfo.FileRefId = GetFileRefId();
-                imgupreq.TenantAccountId = request.TenantAccountId;
-                imgupreq.UserId = request.UserId;
-                imgupreq.BToken = request.BToken;
-                imgupreq.RToken = request.RToken;
+                imgupreq.ImageInfo.FileRefId = GetFileRefId(_ebConnectionFactory); //Passing SolnId For DB Connection (MQ)
 
-                if (MapFilesWithUser(request.FileUrl.Key, imgupreq.ImageInfo.FileRefId) < 1)
+                imgupreq.AddAuth(request.UserId, request.TenantAccountId, request.BToken, request.RToken);
+
+                if (MapFilesWithUser(_ebConnectionFactory, request.FileUrl.Key, imgupreq.ImageInfo.FileRefId) < 1)
                     throw new Exception("File Mapping Failed");
 
                 this.MessageProducer3.Publish(imgupreq);
@@ -134,12 +134,24 @@ namespace ExpressBase.MessageQueue.MQServices
 
             try
             {
-                //request.ImageInfo.FileStoreId = (new EbConnectionFactory(request.TenantAccountId, this.Redis)).FilesDB.UploadFile(
-                //    request.ImageInfo.FileName,
-                //    (request.ImageInfo.MetaDataDictionary != null) ? request.ImageInfo.MetaDataDictionary : new Dictionary<String, List<string>>() { },
-                //    request.Byte,
-                //    request.ImageInfo.FileCategory
-                //    );
+                MemoryStream ms = new MemoryStream(request.Byte);
+                ms.Position = 0;
+
+                using (Image img = Image.FromStream(ms))
+                {
+                    Stream ImgStream = Resize(img, (int)ImageQuality.large, (int)ImageQuality.large);
+
+                    byte[] TempFile = new byte[ImgStream.Length];
+                    ImgStream.Read(TempFile, 0, TempFile.Length);
+                    request.Byte = TempFile;
+                }
+
+                request.ImageInfo.FileStoreId = (new EbConnectionFactory(request.TenantAccountId, this.Redis)).FilesDB.UploadFile(
+                    request.ImageInfo.FileName,
+                    (request.ImageInfo.MetaDataDictionary != null) ? request.ImageInfo.MetaDataDictionary : new Dictionary<String, List<string>>() { },
+                    request.Byte,
+                    request.ImageInfo.FileCategory
+                    );
 
 
                 if (request.ImageInfo.ImageQuality == ImageQuality.original) // Works properly if Soln id doesn't contains a "_"
@@ -281,7 +293,7 @@ namespace ExpressBase.MessageQueue.MQServices
 
                             int sz = (int)Enum.Parse<ImageQuality>(size);
 
-                            if (sz > 1)
+                            if (sz > 1 && sz <500)
                             {
                                 Stream ImgStream = Resize(img, sz, sz);
 
@@ -365,7 +377,15 @@ namespace ExpressBase.MessageQueue.MQServices
         private int GetFileRefId()
         {
             string IdFetchQuery = @"INSERT into eb_files_ref(userid, filename) VALUES (1, 'test') RETURNING id";
-            var table = this.EbConnectionFactory.ObjectsDB.DoQuery(IdFetchQuery);
+            var table = this.EbConnectionFactory.DataDB.DoQuery(IdFetchQuery);
+            int Id = (int)table.Rows[0][0];
+            return Id;
+        }
+
+        private int GetFileRefId(EbConnectionFactory connectionFactory)
+        {
+            string IdFetchQuery = @"INSERT into eb_files_ref(userid, filename) VALUES (1, 'test') RETURNING id";
+            var table = connectionFactory.DataDB.DoQuery(IdFetchQuery);
             int Id = (int)table.Rows[0][0];
             return Id;
         }
@@ -376,10 +396,24 @@ namespace ExpressBase.MessageQueue.MQServices
             string MapQuery = @"INSERT into customer_files(customer_id, eb_files_ref_id) values(customer_id=@cust_id, eb_files_ref_id=@ref_id) returning id";
             DbParameter[] MapParams =
             {
-                        this.InfraConnectionFactory.DataDB.GetNewParameter("cust_id", EbDbTypes.Int32, CustomerId),
-                        this.InfraConnectionFactory.DataDB.GetNewParameter("ref_id", EbDbTypes.Int32, FileRefId)
+                        this.EbConnectionFactory.DataDB.GetNewParameter("cust_id", EbDbTypes.Int32, CustomerId),
+                        this.EbConnectionFactory.DataDB.GetNewParameter("ref_id", EbDbTypes.Int32, FileRefId)
             };
             var table = this.EbConnectionFactory.ObjectsDB.DoQuery(MapQuery);
+            res = (int)table.Rows[0][0];
+            return res;
+        }
+
+        private int MapFilesWithUser(EbConnectionFactory connectionFactory, int CustomerId, int FileRefId)
+        {
+            int res = 0;
+            string MapQuery = @"INSERT into customer_files (customer_id, eb_files_ref_id) values(@cust_id, @ref_id) returning id";
+            DbParameter[] MapParams =
+            {
+                        connectionFactory.DataDB.GetNewParameter("cust_id", EbDbTypes.Int32, CustomerId),
+                        connectionFactory.DataDB.GetNewParameter("ref_id", EbDbTypes.Int32, FileRefId)
+            };
+            var table = connectionFactory.DataDB.DoQuery(MapQuery, MapParams);
             res = (int)table.Rows[0][0];
             return res;
         }
