@@ -136,14 +136,14 @@ namespace ExpressBase.MessageQueue.MQServices
             {
                 MemoryStream ms = new MemoryStream(request.Byte);
                 ms.Position = 0;
+                byte[] TempFile;
 
                 using (Image img = Image.FromStream(ms))
                 {
                     Stream ImgStream = Resize(img, (int)ImageQuality.large, (int)ImageQuality.large);
 
-                    byte[] TempFile = new byte[ImgStream.Length];
+                    TempFile = new byte[ImgStream.Length];
                     ImgStream.Read(TempFile, 0, TempFile.Length);
-                    request.Byte = TempFile;
                 }
 
                 request.ImageInfo.FileStoreId = (new EbConnectionFactory(request.TenantAccountId, this.Redis)).FilesDB.UploadFile(
