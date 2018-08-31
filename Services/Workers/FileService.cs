@@ -34,17 +34,17 @@ namespace ExpressBase.MessageQueue.MQServices
             string Password = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_FTP_PASSWORD);
             FtpWebRequest req = null;
             FtpWebResponse response = null;
-
+            System.Web.HttpUtility.UrlPathEncode(request.FileUrl.Value);
             try
             {
-                req = (FtpWebRequest)WebRequest.Create(request.FileUrl.Value);//fullpath + name);
+                req = (FtpWebRequest)WebRequest.Create(System.Web.HttpUtility.UrlPathEncode(request.FileUrl.Value));//fullpath + name);
                 req.Method = WebRequestMethods.Ftp.DownloadFile;
                 req.Credentials = new NetworkCredential(UserName, Password);
+
                 response = (FtpWebResponse)req.GetResponse();
                 Console.WriteLine("File Recieved : " + request.FileUrl.Value);
-                Console.WriteLine("File Recieved : " + request.FileUrl.Value);
-                Console.WriteLine("File Recieved : " + request.FileUrl.Value);
                 Stream responseStream = response.GetResponseStream();
+
                 byte[] FileContents = new byte[response.ContentLength];
                 if (FileContents.Length == 0)
                     throw new Exception("File returned empty");
@@ -65,21 +65,15 @@ namespace ExpressBase.MessageQueue.MQServices
                 imgupreq.BToken = request.BToken;
                 imgupreq.RToken = request.RToken;
 
-
                 if (MapFilesWithUser(request.FileUrl.Key, imgupreq.ImageInfo.FileRefId) < 1)
                     throw new Exception("File Mapping Failed");
+
                 this.MessageProducer3.Publish(imgupreq);
-                Console.WriteLine("----------------------------------------Success-------------------------------------------------------------");
                 response.Close();
-
-
             }
             catch (WebException ex)
             {
-                if ((response != null) && response.StatusCode == (FtpStatusCode)550)
-                    Console.WriteLine("FileNotFound: " + request.FileUrl.Value);
-                else
-                    Console.WriteLine("Exception in FileName: " + request.FileUrl.Value);
+                Console.WriteLine("Exception (FileName: " + request.FileUrl.Value + "): " + ex.Message);
             }
             return null;
         }
