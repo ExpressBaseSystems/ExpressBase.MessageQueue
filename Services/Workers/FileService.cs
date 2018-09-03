@@ -166,47 +166,47 @@ namespace ExpressBase.MessageQueue.MQServices
                     );
 
 
-                if (request.ImageInfo.ImageQuality == ImageQuality.original)
-                {
+                //if (request.ImageInfo.ImageQuality == ImageQuality.original)
+                //{
 
-                    this.ServerEventClient.BearerToken = request.BToken;
-                    this.ServerEventClient.RefreshToken = request.RToken;
-                    this.ServerEventClient.RefreshTokenUri = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_GET_ACCESS_TOKEN_URL);
-                    this.ServerEventClient.Post<NotifyResponse>(new NotifyUserIdRequest
-                    {
-                        Msg = request.ImageInfo,
-                        Selector = StaticFileConstants.UPLOADSUCCESS,
-                        ToUserAuthId = request.UserAuthId,
-                    });
+                //    this.ServerEventClient.BearerToken = request.BToken;
+                //    this.ServerEventClient.RefreshToken = request.RToken;
+                //    this.ServerEventClient.RefreshTokenUri = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_GET_ACCESS_TOKEN_URL);
+                //    this.ServerEventClient.Post<NotifyResponse>(new NotifyUserIdRequest
+                //    {
+                //        Msg = request.ImageInfo,
+                //        Selector = StaticFileConstants.UPLOADSUCCESS,
+                //        ToUserAuthId = request.UserAuthId,
+                //    });
 
-                    this.MessageProducer3.Publish(new FileMetaPersistRequest
-                    {
-                        FileDetails = new FileMeta
-                        {
-                            FileStoreId = request.ImageInfo.FileStoreId,
-                            FileName = request.ImageInfo.FileName,
-                            MetaDataDictionary = (request.ImageInfo.MetaDataDictionary != null) ? request.ImageInfo.MetaDataDictionary : new Dictionary<String, List<string>>() { },
-                            Length = request.Byte.Length,
-                            FileType = request.ImageInfo.FileType,
-                            FileCategory = request.ImageInfo.FileCategory,
-                            FileRefId = request.ImageInfo.FileRefId
-                        },
-                        TenantAccountId = request.TenantAccountId,
-                        UserId = request.UserId,
-                        BToken = request.BToken,
-                        RToken = request.RToken
-                    });
+                //    this.MessageProducer3.Publish(new FileMetaPersistRequest
+                //    {
+                //        FileDetails = new FileMeta
+                //        {
+                //            FileStoreId = request.ImageInfo.FileStoreId,
+                //            FileName = request.ImageInfo.FileName,
+                //            MetaDataDictionary = (request.ImageInfo.MetaDataDictionary != null) ? request.ImageInfo.MetaDataDictionary : new Dictionary<String, List<string>>() { },
+                //            Length = request.Byte.Length,
+                //            FileType = request.ImageInfo.FileType,
+                //            FileCategory = request.ImageInfo.FileCategory,
+                //            FileRefId = request.ImageInfo.FileRefId
+                //        },
+                //        TenantAccountId = request.TenantAccountId,
+                //        UserId = request.UserId,
+                //        BToken = request.BToken,
+                //        RToken = request.RToken
+                //    });
 
-                    this.MessageProducer3.Publish(new ImageResizeRequest
-                    {
-                        ImageInfo = request.ImageInfo,
-                        ImageByte = request.Byte,
-                        TenantAccountId = request.TenantAccountId,
-                        UserId = request.UserId,
-                        BToken = request.BToken,
-                        RToken = request.RToken
-                    });
-                }
+                //    this.MessageProducer3.Publish(new ImageResizeRequest
+                //    {
+                //        ImageInfo = request.ImageInfo,
+                //        ImageByte = request.Byte,
+                //        TenantAccountId = request.TenantAccountId,
+                //        UserId = request.UserId,
+                //        BToken = request.BToken,
+                //        RToken = request.RToken
+                //    });
+                //}
             }
             catch (Exception e)
             {
