@@ -20,6 +20,8 @@ namespace ExpressBase.MessageQueue.Services
 
         protected EbServerEventClient ServerEventClient { get; private set; }
 
+        protected JsonServiceClient ServiceStackClient { get; private set; }
+
         protected EbConnectionFactory InfraConnectionFactory
         {
             get
@@ -48,6 +50,16 @@ namespace ExpressBase.MessageQueue.Services
         public BaseService(IEbServerEventClient _sec)
         {
             this.ServerEventClient = _sec as EbServerEventClient;
+        }
+        public BaseService(IServiceClient _sec)
+        {
+            this.ServiceStackClient = _sec as JsonServiceClient;
+        }
+
+        public BaseService(IEbConnectionFactory _dbf,IServiceClient _ssclient)
+        {
+            this.EbConnectionFactory = _dbf as EbConnectionFactory;
+            this.ServiceStackClient = _dbf as JsonServiceClient;
         }
 
         public BaseService(IEbConnectionFactory _dbf, IEbServerEventClient _sec)

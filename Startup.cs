@@ -3,7 +3,7 @@ using ExpressBase.Common.Constants;
 using ExpressBase.Common.EbServiceStack.ReqNRes;
 using ExpressBase.Common.ServiceClients;
 using ExpressBase.Common.ServiceStack.Auth;
-using ExpressBase.MessageQueue.Services.Quartz;
+//using ExpressBase.MessageQueue.Services.Quartz;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using Funq;
 using Microsoft.AspNetCore.Builder;
@@ -11,12 +11,12 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Quartz;
+//using Quartz;
 using ServiceStack;
 using ServiceStack.Auth;
 using ServiceStack.Logging;
 using ServiceStack.Messaging;
-using ServiceStack.Quartz;
+//using ServiceStack.Quartz;
 using ServiceStack.RabbitMq;
 using ServiceStack.Redis;
 using System;
@@ -106,6 +106,7 @@ namespace ExpressBase.MessageQueue
             container.Register<IRedisClientsManager>(c => new RedisManagerPool(redisConnectionString));
 
             container.Register<IEbServerEventClient>(c => new EbServerEventClient()).ReusedWithin(ReuseScope.Request);
+            container.Register<IServiceClient>(c => new JsonServiceClient(Environment.GetEnvironmentVariable(EnvironmentConstants.EB_SERVICESTACK_EXT_URL))).ReusedWithin(ReuseScope.Request);
 
             RabbitMqMessageFactory rabitFactory = new RabbitMqMessageFactory();
             rabitFactory.ConnectionFactory.UserName = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_RABBIT_USER);
@@ -122,6 +123,8 @@ namespace ExpressBase.MessageQueue
             mqServer.RegisterHandler<UploadFileRequest>(base.ExecuteMessage);
             mqServer.RegisterHandler<ImageResizeRequest>(base.ExecuteMessage);
             mqServer.RegisterHandler<FileMetaPersistRequest>(base.ExecuteMessage);
+            mqServer.RegisterHandler<ExportApplicationRequest>(base.ExecuteMessage);
+            mqServer.RegisterHandler<ImportApplicationRequest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<EmailServicesMqRequest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<SMSSentMqRequest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<SMSStatusLogMqRequest>(base.ExecuteMessage);
@@ -140,7 +143,7 @@ namespace ExpressBase.MessageQueue
                 return mqServer.CreateMessageQueueClient() as RabbitMqQueueClient;
             });
 
-            var quartzFeature = new QuartzFeature();
+            //var quartzFeature = new QuartzFeature();
 
             //// create a simple job trigger to repeat every minute
             //quartzFeature.RegisterJob<MyJob>(
@@ -152,14 +155,14 @@ namespace ExpressBase.MessageQueue
             //            .Build()
             //);
 
-            quartzFeature.RegisterJob<MyJob>(
-                trigger =>
-                    trigger.WithDailyTimeIntervalSchedule(s => s.WithInterval(1, IntervalUnit.Minute))
-                        .Build()
-            );
+            //quartzFeature.RegisterJob<MyJob>(
+            //    trigger =>
+            //        trigger.WithDailyTimeIntervalSchedule(s => s.WithInterval(1, IntervalUnit.Minute))
+            //            .Build()
+            //);
 
-            // register the plugin
-            Plugins.Add(quartzFeature);
+            //// register the plugin
+            //Plugins.Add(quartzFeature);
 
             this.GlobalRequestFilters.Add((req, res, requestDto) =>
             {
@@ -177,6 +180,10 @@ namespace ExpressBase.MessageQueue
                             res.ReturnAuthRequired();
                         else
                         {
+                            if (req.Headers[CacheConstants.RTOKEN] != null)
+                            {
+                                Resolve<IEbServerEventClient>().AddAuthentication(req);
+                            }
                             var jwtoken = new JwtSecurityToken(auth.Replace("Bearer", string.Empty).Trim());
                             foreach (var c in jwtoken.Claims)
                             {
