@@ -36,6 +36,23 @@ namespace ExpressBase.MessageQueue.MQServices
             string Password = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_FTP_PASSWORD);
             FtpWebRequest req = null;
             FtpWebResponse response = null;
+            UploadImageRequest resp = new UploadImageRequest()
+            {
+                ImageInfo = new ImageMeta()
+                {
+                    FileCategory = EbFileCategory.Images,
+                    FileName = request.FileUrl.Value,
+                    FileType = request.FileUrl.Value.Split('.').Last(),
+                    ImageQuality = ImageQuality.original,
+                    MetaDataDictionary = new Dictionary<string, List<string>>(),
+                    FileRefId = GetFileRefId(_ebConnectionFactory),
+                },
+                UserId = request.UserId,
+                TenantAccountId = request.TenantAccountId,
+                BToken = request.BToken,
+                RToken = request.RToken
+            };
+
             try
             {
                 req = (FtpWebRequest)WebRequest.Create(request.FileUrl.Value);//fullpath + name);
@@ -44,37 +61,26 @@ namespace ExpressBase.MessageQueue.MQServices
                 response = (FtpWebResponse)req.GetResponse();
                 Console.WriteLine("File Recieved : " + request.FileUrl.Value);
                 Stream responseStream = response.GetResponseStream();
-                byte[] FileContents = new byte[response.ContentLength];
+                resp.Byte = new byte[response.ContentLength];
+                resp.ImageInfo.Length = response.ContentLength;
                 byte[] buffer = new byte[2048];
-                int ReadCount = responseStream.Read(buffer, 0, buffer.Length);
-                Int32 FileOffset = 0;
-                while (ReadCount > 0)
+                int ReadCount = 0, FileOffset = 0;
+                do
                 {
+                    ReadCount = responseStream.Read(buffer, 0, buffer.Length);
+
                     for (int i = 0; i < ReadCount; i++)
                     {
-                        FileContents.SetValue(buffer[i], FileOffset);
+                        resp.Byte.SetValue(buffer[i], FileOffset);
                         FileOffset++;
                     }
-                    ReadCount = responseStream.Read(buffer, 0, buffer.Length);
                 }
+                while (ReadCount > 0);
 
-                UploadImageRequest imgupreq = new UploadImageRequest();
-                imgupreq.Byte = FileContents;
-                imgupreq.ImageInfo = new ImageMeta();
-                imgupreq.ImageInfo.FileCategory = EbFileCategory.Images;
-                imgupreq.ImageInfo.FileName = request.FileUrl.Value;
-                imgupreq.ImageInfo.FileType = request.FileUrl.Value.Split('.').Last();
-                imgupreq.ImageInfo.ImageQuality = ImageQuality.original;
-                imgupreq.ImageInfo.Length = FileContents.Length;
-                imgupreq.ImageInfo.MetaDataDictionary = new Dictionary<string, List<string>>();
-                imgupreq.ImageInfo.FileRefId = GetFileRefId(_ebConnectionFactory); //Passing SolnId For DB Connection (MQ)
-
-                imgupreq.AddAuth(request.UserId, request.TenantAccountId, request.BToken, request.RToken);
-
-                if (MapFilesWithUser(_ebConnectionFactory, request.FileUrl.Key, imgupreq.ImageInfo.FileRefId) < 1)
+                if (MapFilesWithUser(_ebConnectionFactory, request.FileUrl.Key, request.FileUrl.Key) < 1)
                     throw new Exception("File Mapping Failed");
 
-                this.MessageProducer3.Publish(imgupreq);
+                this.MessageProducer3.Publish(resp);
                 response.Close();
             }
             catch (WebException ex)
@@ -300,7 +306,7 @@ namespace ExpressBase.MessageQueue.MQServices
 
                             int sz = (int)Enum.Parse<ImageQuality>(size);
 
-                            if (sz > 1 && sz <500)
+                            if (sz > 1 && sz < 500)
                             {
                                 Stream ImgStream = Resize(img, sz, sz);
 
