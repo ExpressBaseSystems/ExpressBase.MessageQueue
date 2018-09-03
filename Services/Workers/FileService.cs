@@ -143,14 +143,13 @@ namespace ExpressBase.MessageQueue.MQServices
             {
                 MemoryStream ms = new MemoryStream(request.Byte);
                 ms.Position = 0;
-                byte[] TempFile;
 
                 using (Image img = Image.FromStream(ms))
                 {
                     Stream ImgStream = Resize(img, (int)ImageQuality.large, (int)ImageQuality.large);
 
-                    TempFile = new byte[ImgStream.Length];
-                    ImgStream.Read(TempFile, 0, TempFile.Length);
+                    request.Byte = new byte[ImgStream.Length];
+                    ImgStream.Read(request.Byte, 0, request.Byte.Length);
                 }
 
                 request.ImageInfo.FileStoreId = (new EbConnectionFactory(request.TenantAccountId, this.Redis)).FilesDB.UploadFile(
@@ -161,7 +160,7 @@ namespace ExpressBase.MessageQueue.MQServices
                     );
 
 
-                if (request.ImageInfo.ImageQuality == ImageQuality.original) // Works properly if Soln id doesn't contains a "_"
+                if (request.ImageInfo.ImageQuality == ImageQuality.original)
                 {
 
                     this.ServerEventClient.BearerToken = request.BToken;
