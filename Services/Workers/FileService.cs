@@ -41,15 +41,22 @@ namespace ExpressBase.MessageQueue.MQServices
                 req = (FtpWebRequest)WebRequest.Create(request.FileUrl.Value);//fullpath + name);
                 req.Method = WebRequestMethods.Ftp.DownloadFile;
                 req.Credentials = new NetworkCredential(UserName, Password);
-
                 response = (FtpWebResponse)req.GetResponse();
                 Console.WriteLine("File Recieved : " + request.FileUrl.Value);
                 Stream responseStream = response.GetResponseStream();
-
                 byte[] FileContents = new byte[response.ContentLength];
-                if (FileContents.Length == 0)
-                    throw new Exception("File returned empty");
-                responseStream.ReadAsync(FileContents, 0, FileContents.Length);
+                byte[] buffer = new byte[2048];
+                int ReadCount = responseStream.Read(buffer, 0, buffer.Length);
+                Int32 FileOffset = 0;
+                while (ReadCount > 0)
+                {
+                    for (int i = 0; i < ReadCount; i++)
+                    {
+                        FileContents.SetValue(buffer[i], FileOffset);
+                        FileOffset++;
+                    }
+                    ReadCount = responseStream.Read(buffer, 0, buffer.Length);
+                }
 
                 UploadImageRequest imgupreq = new UploadImageRequest();
                 imgupreq.Byte = FileContents;
