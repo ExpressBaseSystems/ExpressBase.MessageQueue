@@ -21,7 +21,7 @@ using System.Net;
 namespace ExpressBase.MessageQueue.MQServices
 {
     [Restrict(InternalOnly = true)]
-    public class FileServiceInternal : BaseService
+    public class FileServiceInternal : EbMqBaseService
     {
         public FileServiceInternal(IMessageProducer _mqp, IMessageQueueClient _mqc, IEbServerEventClient _sec) : base(_mqp, _mqc, _sec)
         {

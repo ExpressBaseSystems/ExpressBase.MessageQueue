@@ -9,7 +9,7 @@ using System.Data.Common;
 namespace ExpressBase.MessageQueue.MQServices
 {
     [Restrict(InternalOnly = true)]
-    public class SMSServiceInternal : BaseService
+    public class SMSServiceInternal : EbMqBaseService
     {
         public SMSServiceInternal(IMessageProducer _mqp) : base(_mqp)
         {
