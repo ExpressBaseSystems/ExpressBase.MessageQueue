@@ -77,16 +77,16 @@ namespace ExpressBase.MessageQueue.MQServices
                 }
                 while (ReadCount > 0);
 
-                MemoryStream ms = new MemoryStream(resp.Byte);
-                ms.Position = 0;
+                //MemoryStream ms = new MemoryStream(resp.Byte);
+                //ms.Position = 0;
 
-                using (Image img = Image.FromStream(ms))
-                {
-                    Stream ImgStream = Resize(img, (int)ImageQuality.large, (int)ImageQuality.large);
+                //using (Image img = Image.FromStream(ms))
+                //{
+                //    Stream ImgStream = Resize(img, (int)ImageQuality.large, (int)ImageQuality.large);
 
-                    resp.Byte = new byte[ImgStream.Length];
-                    ImgStream.Read(resp.Byte, 0, resp.Byte.Length);
-                }
+                  //  resp.Byte = new byte[ImgStream.Length];
+                   // ImgStream.Read(resp.Byte, 0, resp.Byte.Length);
+                //}
 
                 if (MapFilesWithUser(_ebConnectionFactory, request.FileUrl.Key, request.FileUrl.Key) < 1)
                     throw new Exception("File Mapping Failed");
