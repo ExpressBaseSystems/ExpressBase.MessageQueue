@@ -23,7 +23,7 @@ using CloudinaryDotNet.Actions;
 namespace ExpressBase.MessageQueue.MQServices
 {
     [Restrict(InternalOnly = true)]
-    public class FileServiceInternal : BaseService
+    public class FileServiceInternal : EbMqBaseService
     {
         public FileServiceInternal(IMessageProducer _mqp, IMessageQueueClient _mqc, IEbServerEventClient _sec) : base(_mqp, _mqc, _sec)
         {
@@ -86,6 +86,17 @@ namespace ExpressBase.MessageQueue.MQServices
                     }
                 }
                 while (ReadCount > 0);
+
+                //MemoryStream ms = new MemoryStream(resp.Byte);
+                //ms.Position = 0;
+
+                //using (Image img = Image.FromStream(ms))
+                //{
+                //    Stream ImgStream = Resize(img, (int)ImageQuality.large, (int)ImageQuality.large);
+
+                  //  resp.Byte = new byte[ImgStream.Length];
+                   // ImgStream.Read(resp.Byte, 0, resp.Byte.Length);
+                //}
 
                 if (MapFilesWithUser(_ebConnectionFactory, request.FileUrl.Key, request.FileUrl.Key) < 1)
                     throw new Exception("File Mapping Failed");
@@ -159,17 +170,16 @@ namespace ExpressBase.MessageQueue.MQServices
 
             try
             {
-                MemoryStream ms = new MemoryStream(request.Byte);
-                ms.Position = 0;
-                byte[] TempFile;
+                //MemoryStream ms = new MemoryStream(request.Byte);
+                //ms.Position = 0;
 
-                using (Image img = Image.FromStream(ms))
-                {
-                    Stream ImgStream = Resize(img, (int)ImageQuality.large, (int)ImageQuality.large);
+                //using (Image img = Image.FromStream(ms))
+                //{
+                //    Stream ImgStream = Resize(img, (int)ImageQuality.large, (int)ImageQuality.large);
 
-                    TempFile = new byte[ImgStream.Length];
-                    ImgStream.Read(TempFile, 0, TempFile.Length);
-                }
+                //    request.Byte = new byte[ImgStream.Length];
+                //    ImgStream.Read(request.Byte, 0, request.Byte.Length);
+                //}
 
                 request.ImageInfo.FileStoreId = (new EbConnectionFactory(request.TenantAccountId, this.Redis)).FilesDB.UploadFile(
                     request.ImageInfo.FileName,
@@ -179,47 +189,47 @@ namespace ExpressBase.MessageQueue.MQServices
                     );
 
 
-                if (request.ImageInfo.ImageQuality == ImageQuality.original) // Works properly if Soln id doesn't contains a "_"
-                {
+                //if (request.ImageInfo.ImageQuality == ImageQuality.original)
+                //{
 
-                    this.ServerEventClient.BearerToken = request.BToken;
-                    this.ServerEventClient.RefreshToken = request.RToken;
-                    this.ServerEventClient.RefreshTokenUri = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_GET_ACCESS_TOKEN_URL);
-                    this.ServerEventClient.Post<NotifyResponse>(new NotifyUserIdRequest
-                    {
-                        Msg = request.ImageInfo,
-                        Selector = StaticFileConstants.UPLOADSUCCESS,
-                        ToUserAuthId = request.UserAuthId,
-                    });
+                //    this.ServerEventClient.BearerToken = request.BToken;
+                //    this.ServerEventClient.RefreshToken = request.RToken;
+                //    this.ServerEventClient.RefreshTokenUri = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_GET_ACCESS_TOKEN_URL);
+                //    this.ServerEventClient.Post<NotifyResponse>(new NotifyUserIdRequest
+                //    {
+                //        Msg = request.ImageInfo,
+                //        Selector = StaticFileConstants.UPLOADSUCCESS,
+                //        ToUserAuthId = request.UserAuthId,
+                //    });
 
-                    this.MessageProducer3.Publish(new FileMetaPersistRequest
-                    {
-                        FileDetails = new FileMeta
-                        {
-                            FileStoreId = request.ImageInfo.FileStoreId,
-                            FileName = request.ImageInfo.FileName,
-                            MetaDataDictionary = (request.ImageInfo.MetaDataDictionary != null) ? request.ImageInfo.MetaDataDictionary : new Dictionary<String, List<string>>() { },
-                            Length = request.Byte.Length,
-                            FileType = request.ImageInfo.FileType,
-                            FileCategory = request.ImageInfo.FileCategory,
-                            FileRefId = request.ImageInfo.FileRefId
-                        },
-                        TenantAccountId = request.TenantAccountId,
-                        UserId = request.UserId,
-                        BToken = request.BToken,
-                        RToken = request.RToken
-                    });
+                //    this.MessageProducer3.Publish(new FileMetaPersistRequest
+                //    {
+                //        FileDetails = new FileMeta
+                //        {
+                //            FileStoreId = request.ImageInfo.FileStoreId,
+                //            FileName = request.ImageInfo.FileName,
+                //            MetaDataDictionary = (request.ImageInfo.MetaDataDictionary != null) ? request.ImageInfo.MetaDataDictionary : new Dictionary<String, List<string>>() { },
+                //            Length = request.Byte.Length,
+                //            FileType = request.ImageInfo.FileType,
+                //            FileCategory = request.ImageInfo.FileCategory,
+                //            FileRefId = request.ImageInfo.FileRefId
+                //        },
+                //        TenantAccountId = request.TenantAccountId,
+                //        UserId = request.UserId,
+                //        BToken = request.BToken,
+                //        RToken = request.RToken
+                //    });
 
-                    this.MessageProducer3.Publish(new ImageResizeRequest
-                    {
-                        ImageInfo = request.ImageInfo,
-                        ImageByte = request.Byte,
-                        TenantAccountId = request.TenantAccountId,
-                        UserId = request.UserId,
-                        BToken = request.BToken,
-                        RToken = request.RToken
-                    });
-                }
+                //    this.MessageProducer3.Publish(new ImageResizeRequest
+                //    {
+                //        ImageInfo = request.ImageInfo,
+                //        ImageByte = request.Byte,
+                //        TenantAccountId = request.TenantAccountId,
+                //        UserId = request.UserId,
+                //        BToken = request.BToken,
+                //        RToken = request.RToken
+                //    });
+                //}
             }
             catch (Exception e)
             {

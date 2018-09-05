@@ -12,7 +12,7 @@ using System.Data.Common;
 
 namespace ExpressBase.MessageQueue.MQServices
 {
-    public class SlackService : BaseService
+    public class SlackService : EbMqBaseService
     {
         public SlackService(IMessageProducer _mqp) : base(_mqp)
         {
@@ -50,7 +50,7 @@ namespace ExpressBase.MessageQueue.MQServices
     }
 
     [Restrict(InternalOnly = true)]
-    public class SlackServiceInternal : BaseService
+    public class SlackServiceInternal : EbMqBaseService
     {
         public SlackServiceInternal()
         {

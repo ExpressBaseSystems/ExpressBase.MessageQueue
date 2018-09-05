@@ -125,6 +125,7 @@ namespace ExpressBase.MessageQueue
             mqServer.RegisterHandler<FileMetaPersistRequest>(base.ExecuteMessage);
             mqServer.RegisterHandler<ExportApplicationRequest>(base.ExecuteMessage);
             mqServer.RegisterHandler<ImportApplicationRequest>(base.ExecuteMessage);
+            mqServer.RegisterHandler<EmailServicesRequest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<EmailServicesMqRequest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<SMSSentMqRequest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<SMSStatusLogMqRequest>(base.ExecuteMessage);

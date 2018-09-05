@@ -16,7 +16,7 @@ using System.Threading.Tasks;
 namespace ExpressBase.MessageQueue.Services.Workers
 {
     [Authenticate]
-    public class ImportrExportService : BaseService
+    public class ImportrExportService : EbMqBaseService
     {
         public ImportrExportService(IMessageProducer _mqp, IMessageQueueClient _mqc, IEbServerEventClient _sec) : base(_mqp, _mqc, _sec)
         {
@@ -25,7 +25,7 @@ namespace ExpressBase.MessageQueue.Services.Workers
         public ExportApplicationResponse Post(ExportApplicationMqRequest request)
         {
             ExportApplicationResponse resp = new ExportApplicationResponse();
-            this.MessageProducer3.Publish(new ExportApplicationRequest
+            MessageProducer3.Publish(new ExportApplicationRequest
             {
                 AppId = request.AppId,
                 Refids = request.Refids,
@@ -57,7 +57,7 @@ namespace ExpressBase.MessageQueue.Services.Workers
     }
 
     [Restrict(InternalOnly = true)]
-    public class ImportExportInternalService : BaseService
+    public class ImportExportInternalService : EbMqBaseService
     {
         public ImportExportInternalService(IServiceClient _ssclient) : base(_ssclient) { }
 

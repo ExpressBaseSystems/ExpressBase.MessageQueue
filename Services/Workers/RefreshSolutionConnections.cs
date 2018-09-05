@@ -13,7 +13,7 @@ using System.Data;
 
 namespace ExpressBase.MessageQueue.MQServices
 {
-    public class ConnectionManagerService : BaseService
+    public class ConnectionManagerService : EbMqBaseService
     {
         public ConnectionManagerService(IMessageProducer _mqp) : base(_mqp)
         {
@@ -46,7 +46,7 @@ namespace ExpressBase.MessageQueue.MQServices
     }
 
     [Restrict(InternalOnly = true)]
-    public class RefreshSolutionConnections : BaseService
+    public class RefreshSolutionConnections : EbMqBaseService
     {
         public RefreshSolutionConnections(IEbServerEventClient _sec) : base(_sec)
         {
