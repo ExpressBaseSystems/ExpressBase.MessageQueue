@@ -413,7 +413,7 @@ namespace ExpressBase.MessageQueue.MQServices
 
         private void CloudinaryUpload(int ImageId, byte[] FileContents)
         {
-            Stream ImageStream = new MemoryStream(FileContents);
+            MemoryStream ImageStream = new MemoryStream(FileContents);
             var uploadParams = new ImageUploadParams()
             {
                 File = new FileDescription(ImageId.ToString(), ImageStream),
