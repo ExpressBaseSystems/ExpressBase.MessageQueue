@@ -32,7 +32,7 @@ namespace ExpressBase.MessageQueue.MQServices
 
         public string Post(GetImageFtpRequest request)
         {
-            EbConnectionFactory _ebConnectionFactory = new EbConnectionFactory(request.TenantAccountId, this.Redis);
+            EbConnectionFactory _ebConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
             string Host = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_FTP_HOST);
             string UserName = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_FTP_USER);
             string Password = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_FTP_PASSWORD);
@@ -51,7 +51,7 @@ namespace ExpressBase.MessageQueue.MQServices
                     FileRefId = UploadImageRequest.GetFileRefId(_ebConnectionFactory.DataDB),
                 },
                 UserId = request.UserId,
-                TenantAccountId = request.TenantAccountId,
+                SolnId = request.SolnId,
                 BToken = request.BToken,
                 RToken = request.RToken
             };
@@ -91,7 +91,7 @@ namespace ExpressBase.MessageQueue.MQServices
                         ImageInfo = new ImageMeta() { FileRefId = request.FileUrl.Key },
                         ImageBytes = ImageReq.Byte,
                         UserId = request.UserId,
-                        TenantAccountId = request.TenantAccountId,
+                        SolnId = request.SolnId,
                         BToken = request.BToken,
                         RToken = request.RToken
                     });
@@ -117,7 +117,7 @@ namespace ExpressBase.MessageQueue.MQServices
 
             try
             {
-                request.FileDetails.FileStoreId = (new EbConnectionFactory(request.TenantAccountId, this.Redis)).FilesDB.UploadFile(
+                request.FileDetails.FileStoreId = (new EbConnectionFactory(request.SolnId, this.Redis)).FilesDB.UploadFile(
                     request.FileDetails.FileName,
                     (request.FileDetails.MetaDataDictionary != null) ? request.FileDetails.MetaDataDictionary : new Dictionary<String, List<string>>() { },
                     request.Byte,
@@ -146,7 +146,7 @@ namespace ExpressBase.MessageQueue.MQServices
                         FileCategory = request.FileDetails.FileCategory,
                         FileRefId = request.FileDetails.FileRefId
                     },
-                    TenantAccountId = request.TenantAccountId,
+                    SolnId = request.SolnId,
                     UserId = request.UserId,
                     BToken = request.BToken,
                     RToken = request.RToken
@@ -166,7 +166,7 @@ namespace ExpressBase.MessageQueue.MQServices
         {
             try
             {
-                request.ImageInfo.FileStoreId = (new EbConnectionFactory(request.TenantAccountId, this.Redis)).FilesDB.UploadFile(
+                request.ImageInfo.FileStoreId = (new EbConnectionFactory(request.SolnId, this.Redis)).FilesDB.UploadFile(
                     request.ImageInfo.FileName,
                     (request.ImageInfo.MetaDataDictionary != null) ? request.ImageInfo.MetaDataDictionary : new Dictionary<String, List<string>>() { },
                     request.Byte,
@@ -195,7 +195,7 @@ namespace ExpressBase.MessageQueue.MQServices
                         FileCategory = request.ImageInfo.FileCategory,
                         FileRefId = request.ImageInfo.FileRefId
                     },
-                    TenantAccountId = request.TenantAccountId,
+                    SolnId = request.SolnId,
                     UserId = request.UserId
                 });
 
@@ -219,7 +219,7 @@ namespace ExpressBase.MessageQueue.MQServices
                     tag = string.Join(CharConstants.COMMA, items.Value);
                 }
 
-            EbConnectionFactory connectionFactory = new EbConnectionFactory(request.TenantAccountId, this.Redis);
+            EbConnectionFactory connectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
 
             string sql = "UPDATE eb_files_ref SET (filename, userid, filestore_id, length, filetype, tags, filecategory, uploadts) = (@filename, @userid, @filestoreid, @length, @filetype, @tags, @filecategory, CURRENT_TIMESTAMP) WHERE id = @refid RETURNING id";
             DbParameter[] parameters =
@@ -405,7 +405,7 @@ namespace ExpressBase.MessageQueue.MQServices
         public string Post(CloudinaryUploadRequest request)
         {
 
-            string url = (new EbConnectionFactory(request.TenantAccountId, this.Redis)).ImageManipulate.Resize
+            string url = (new EbConnectionFactory(request.SolnId, this.Redis)).ImageManipulate.Resize
                 (request.ImageBytes, request.ImageInfo, (int)(52428800 / request.ImageBytes.Length));
 
             this.MessageProducer3.Publish(new CloudinaryUploadResponse()
@@ -413,7 +413,7 @@ namespace ExpressBase.MessageQueue.MQServices
                 Url = url,
                 ImageInfo = request.ImageInfo,
                 UserId = request.UserId,
-                TenantAccountId = request.TenantAccountId,
+                SolnId = request.SolnId,
                 BToken = request.BToken,
                 RToken = request.RToken
             });
@@ -443,7 +443,7 @@ namespace ExpressBase.MessageQueue.MQServices
                 },
                 Byte = CompressedImageBytes,
                 UserId = request.UserId,
-                TenantAccountId = request.TenantAccountId,
+                SolnId = request.SolnId,
                 BToken = request.BToken,
                 RToken = request.RToken,
 

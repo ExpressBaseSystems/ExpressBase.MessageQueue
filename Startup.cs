@@ -200,9 +200,9 @@ namespace ExpressBase.MessageQueue
                                 {
                                     RequestContext.Instance.Items.Add(CoreConstants.SOLUTION_ID, c.Value);
                                     if (requestDto is IEbSSRequest)
-                                        (requestDto as IEbSSRequest).TenantAccountId = c.Value;
-                                    if (requestDto is EbServiceStackRequest)
-                                        (requestDto as EbServiceStackRequest).TenantAccountId = c.Value;
+                                        (requestDto as IEbSSRequest).SolnId = c.Value;
+                                    if (requestDto is EbServiceStackAuthRequest)
+                                        (requestDto as EbServiceStackAuthRequest).SolnId = c.Value;
                                     continue;
                                 }
                                 if (c.Type == "uid" && !string.IsNullOrEmpty(c.Value))
@@ -210,22 +210,22 @@ namespace ExpressBase.MessageQueue
                                     RequestContext.Instance.Items.Add("UserId", Convert.ToInt32(c.Value));
                                     if (requestDto is IEbSSRequest)
                                         (requestDto as IEbSSRequest).UserId = Convert.ToInt32(c.Value);
-                                    if (requestDto is EbServiceStackRequest)
-                                        (requestDto as EbServiceStackRequest).UserId = Convert.ToInt32(c.Value);
+                                    if (requestDto is EbServiceStackAuthRequest)
+                                        (requestDto as EbServiceStackAuthRequest).UserId = Convert.ToInt32(c.Value);
                                     continue;
                                 }
                                 if (c.Type == "wc" && !string.IsNullOrEmpty(c.Value))
                                 {
                                     RequestContext.Instance.Items.Add("wc", c.Value);
-                                    if (requestDto is EbServiceStackRequest)
-                                        (requestDto as EbServiceStackRequest).WhichConsole = c.Value.ToString();
+                                    if (requestDto is EbServiceStackAuthRequest)
+                                        (requestDto as EbServiceStackAuthRequest).WhichConsole = c.Value.ToString();
                                     continue;
                                 }
                                 if (c.Type == "sub" && !string.IsNullOrEmpty(c.Value))
                                 {
                                     RequestContext.Instance.Items.Add("sub", c.Value);
-                                    if (requestDto is EbServiceStackRequest)
-                                        (requestDto as EbServiceStackRequest).UserAuthId = c.Value.ToString();
+                                    if (requestDto is EbServiceStackAuthRequest)
+                                        (requestDto as EbServiceStackAuthRequest).UserAuthId = c.Value.ToString();
                                     continue;
                                 }
                             }

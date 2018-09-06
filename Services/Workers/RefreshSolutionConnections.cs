@@ -28,7 +28,7 @@ namespace ExpressBase.MessageQueue.MQServices
             {
                 this.MessageProducer3.Publish(new RefreshSolutionConnectionsRequest()
                 {
-                    TenantAccountId = request.SolutionId,
+                    SolnId = request.SolutionId,
                     UserId = request.UserId,
                     UserAuthId = request.UserAuthId,
                     BToken = (!String.IsNullOrEmpty(this.Request.Authorization)) ? this.Request.Authorization.Replace("Bearer", string.Empty).Trim() : String.Empty,
@@ -64,7 +64,7 @@ namespace ExpressBase.MessageQueue.MQServices
                     string sql = @"SELECT con_type, con_obj FROM eb_connections WHERE solution_id = @solution_id AND eb_del = 'F'";
                     DataTable dt = new DataTable();
                     var ada = new Npgsql.NpgsqlDataAdapter(sql, con);
-                    ada.SelectCommand.Parameters.Add(new Npgsql.NpgsqlParameter("solution_id", NpgsqlTypes.NpgsqlDbType.Text) { Value = req.TenantAccountId });
+                    ada.SelectCommand.Parameters.Add(new Npgsql.NpgsqlParameter("solution_id", NpgsqlTypes.NpgsqlDbType.Text) { Value = req.SolnId });
                     ada.Fill(dt);
 
                     EbConnectionsConfig cons = new EbConnectionsConfig();
@@ -86,9 +86,9 @@ namespace ExpressBase.MessageQueue.MQServices
                             cons.SMSConnection = EbSerializers.Json_Deserialize<SMSConnection>(dr["con_obj"].ToString());
                         // ... More to come
                     }
-                    Redis.Set<EbConnectionsConfig>(string.Format(CoreConstants.SOLUTION_CONNECTION_REDIS_KEY, req.TenantAccountId), cons);
+                    Redis.Set<EbConnectionsConfig>(string.Format(CoreConstants.SOLUTION_CONNECTION_REDIS_KEY, req.SolnId), cons);
                 }
-                
+
 
                 if (!String.IsNullOrEmpty(req.UserAuthId))
                 {

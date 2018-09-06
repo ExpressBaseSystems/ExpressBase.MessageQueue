@@ -23,7 +23,7 @@ namespace ExpressBase.MessageQueue.MQServices
         {
             try
             {
-                this.MessageProducer3.Publish(new SlackPostRequest { Payload = request.Payload, PostType = request.PostType, TenantAccountId = request.TenantAccountId, UserId = request.UserId });
+                this.MessageProducer3.Publish(new SlackPostRequest { Payload = request.Payload, PostType = request.PostType, SolnId = request.SolnId, UserId = request.UserId });
             }
             catch (Exception e)
             {
@@ -38,7 +38,7 @@ namespace ExpressBase.MessageQueue.MQServices
         {
             try
             {
-                this.MessageProducer3.Publish(new SlackAuthRequest { IsNew = request.IsNew, SlackJson = request.SlackJson, TenantAccountId = request.TenantAccountId, UserId = request.UserId });
+                this.MessageProducer3.Publish(new SlackAuthRequest { IsNew = request.IsNew, SlackJson = request.SlackJson, SolnId = request.SolnId, UserId = request.UserId });
             }
             catch (Exception e)
             {
@@ -58,7 +58,7 @@ namespace ExpressBase.MessageQueue.MQServices
 
         public bool Post(SlackAuthRequest req)
         {
-            EbConnectionFactory dbFactory = new EbConnectionFactory(req.TenantAccountId, this.Redis);
+            EbConnectionFactory dbFactory = new EbConnectionFactory(req.SolnId, this.Redis);
 
             if (req.IsNew)
             {
@@ -88,7 +88,7 @@ namespace ExpressBase.MessageQueue.MQServices
         {
             string sql = "SELECT slackjson FROM eb_users WHERE id = @id";
 
-            EbConnectionFactory dbFactory = new EbConnectionFactory(req.TenantAccountId, this.Redis);
+            EbConnectionFactory dbFactory = new EbConnectionFactory(req.SolnId, this.Redis);
 
             try
             {
