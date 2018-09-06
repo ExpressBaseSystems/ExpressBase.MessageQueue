@@ -30,12 +30,6 @@ namespace ExpressBase.MessageQueue.MQServices
     {
         public FileServiceInternal(IMessageProducer _mqp, IMessageQueueClient _mqc, IEbServerEventClient _sec) : base(_mqp, _mqc, _sec)
         {
-            Account ClAaccount = new Account(
-                "drifgiqrz",
-                "573188885651973",
-                "i8zlfbggsGEYiDy7urQRSUN5CWk");
-            ClUploader = new Cloudinary(ClAaccount);
-
         }
 
         Cloudinary ClUploader;
@@ -65,8 +59,6 @@ namespace ExpressBase.MessageQueue.MQServices
                 BToken = request.BToken,
                 RToken = request.RToken
             };
-
-            byte[] fByte;
 
             try
             {
@@ -101,25 +93,52 @@ namespace ExpressBase.MessageQueue.MQServices
                     new CloudinaryUploadReq()
                     {
                         ImageKey = request.FileUrl.Key,
-                        ImageBytes = ImageReq.Byte
+                        ImageBytes = ImageReq.Byte,
+                        Account = request.CloudinaryAccount,
+                        UserId = request.UserId,
+                        TenantAccountId = request.TenantAccountId,
+                        BToken = request.BToken,
+                        RToken = request.RToken
                     });
+                    Log.Info("Uploaded to Cloudinary");
                 }
                 else
                 {
                     this.MessageProducer3.Publish(ImageReq);
+                    Log.Info("Pushed Original to Queue");
+
                 }
                 response.Close();
             }
             catch (WebException ex)
             {
-                Console.WriteLine("Exception (FileName: " + request.FileUrl.Value + "): " + ex.Message);
             }
             return null;
         }
 
         public string Post(CloudinaryUploadReq request)
         {
-            CloudinaryUpload(request.ImageKey, request.ImageBytes);
+            ClUploader = new Cloudinary(request.Account);
+
+            MemoryStream ImageStream = new MemoryStream(request.ImageBytes);
+            var uploadParams = new ImageUploadParams()
+            {
+                File = new FileDescription(request.ImageKey.ToString(), ImageStream),
+                Transformation = new Transformation().Quality(40),
+                PublicId = request.ImageKey.ToString(),
+            };
+            ImageUploadResult uploadResult = ClUploader.Upload(uploadParams);
+
+            this.MessageProducer3.Publish(new CloudinaryResponseUrl()
+            {
+                ImageUrl  = uploadResult.SecureUri.AbsoluteUri,
+                ImageKey = uploadResult.PublicId.ToInt(),
+                UserId = request.UserId,
+                TenantAccountId = request.TenantAccountId,
+                BToken = request.BToken,
+                RToken = request.RToken
+            });
+
             return null;
         }
 
@@ -179,13 +198,22 @@ namespace ExpressBase.MessageQueue.MQServices
             FlurlRequest CloudinaryRequest = new FlurlRequest(CompressedImageUrl.ImageUrl);
             HttpResponseMessage CompressedImageResponse = Send(CloudinaryRequest).Result;
             byte[] CompressedImageBytes = CompressedImageResponse.Content.ReadAsByteArrayAsync().Result;
-            UploadImageRequest ImageReq = new UploadImageRequest()
-            {
-                ImageInfo = new ImageMeta(),
-                Byte = CompressedImageBytes,
-            };
 
-            this.MessageProducer3.Publish(ImageReq);
+            this.MessageProducer3.Publish(new UploadImageRequest()
+            {
+                ImageInfo = new ImageMeta()
+                {
+                    FileRefId = CompressedImageUrl.ImageKey,
+                    ImageQuality = ImageQuality.large
+                },
+                Byte = CompressedImageBytes,
+                UserId = CompressedImageUrl.UserId,
+                TenantAccountId = CompressedImageUrl.TenantAccountId,
+                BToken = CompressedImageUrl.BToken,
+                RToken = CompressedImageUrl.RToken,
+                
+            });
+
             return null;
         }
 
@@ -200,17 +228,6 @@ namespace ExpressBase.MessageQueue.MQServices
 
             try
             {
-                //MemoryStream ms = new MemoryStream(request.Byte);
-                //ms.Position = 0;
-
-                //using (Image img = Image.FromStream(ms))
-                //{
-                //    Stream ImgStream = Resize(img, (int)ImageQuality.large, (int)ImageQuality.large);
-
-                //    request.Byte = new byte[ImgStream.Length];
-                //    ImgStream.Read(request.Byte, 0, request.Byte.Length);
-                //}
-
                 request.ImageInfo.FileStoreId = (new EbConnectionFactory(request.TenantAccountId, this.Redis)).FilesDB.UploadFile(
                     request.ImageInfo.FileName,
                     (request.ImageInfo.MetaDataDictionary != null) ? request.ImageInfo.MetaDataDictionary : new Dictionary<String, List<string>>() { },
@@ -218,48 +235,32 @@ namespace ExpressBase.MessageQueue.MQServices
                     request.ImageInfo.FileCategory
                     );
 
+                this.ServerEventClient.BearerToken = request.BToken;
+                this.ServerEventClient.RefreshToken = request.RToken;
+                this.ServerEventClient.RefreshTokenUri = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_GET_ACCESS_TOKEN_URL);
+                this.ServerEventClient.Post<NotifyResponse>(new NotifyUserIdRequest
+                {
+                    Msg = request.ImageInfo,
+                    Selector = StaticFileConstants.UPLOADSUCCESS,
+                    ToUserAuthId = request.UserAuthId,
+                });
 
-                //if (request.ImageInfo.ImageQuality == ImageQuality.original)
-                //{
+                bool IsPersisted = Persist(new FileMetaPersistRequest
+                {
+                    FileDetails = new FileMeta
+                    {
+                        FileStoreId = request.ImageInfo.FileStoreId,
+                        FileName = request.ImageInfo.FileName,
+                        MetaDataDictionary = (request.ImageInfo.MetaDataDictionary != null) ? request.ImageInfo.MetaDataDictionary : new Dictionary<String, List<string>>() { },
+                        Length = request.Byte.Length,
+                        FileType = request.ImageInfo.FileType,
+                        FileCategory = request.ImageInfo.FileCategory,
+                        FileRefId = request.ImageInfo.FileRefId
+                    }
+                });
 
-                //    this.ServerEventClient.BearerToken = request.BToken;
-                //    this.ServerEventClient.RefreshToken = request.RToken;
-                //    this.ServerEventClient.RefreshTokenUri = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_GET_ACCESS_TOKEN_URL);
-                //    this.ServerEventClient.Post<NotifyResponse>(new NotifyUserIdRequest
-                //    {
-                //        Msg = request.ImageInfo,
-                //        Selector = StaticFileConstants.UPLOADSUCCESS,
-                //        ToUserAuthId = request.UserAuthId,
-                //    });
-
-                //    this.MessageProducer3.Publish(new FileMetaPersistRequest
-                //    {
-                //        FileDetails = new FileMeta
-                //        {
-                //            FileStoreId = request.ImageInfo.FileStoreId,
-                //            FileName = request.ImageInfo.FileName,
-                //            MetaDataDictionary = (request.ImageInfo.MetaDataDictionary != null) ? request.ImageInfo.MetaDataDictionary : new Dictionary<String, List<string>>() { },
-                //            Length = request.Byte.Length,
-                //            FileType = request.ImageInfo.FileType,
-                //            FileCategory = request.ImageInfo.FileCategory,
-                //            FileRefId = request.ImageInfo.FileRefId
-                //        },
-                //        TenantAccountId = request.TenantAccountId,
-                //        UserId = request.UserId,
-                //        BToken = request.BToken,
-                //        RToken = request.RToken
-                //    });
-
-                //    this.MessageProducer3.Publish(new ImageResizeRequest
-                //    {
-                //        ImageInfo = request.ImageInfo,
-                //        ImageByte = request.Byte,
-                //        TenantAccountId = request.TenantAccountId,
-                //        UserId = request.UserId,
-                //        BToken = request.BToken,
-                //        RToken = request.RToken
-                //    });
-                //}
+                if (request.ImageInfo.ImageQuality == ImageQuality.large)
+                    Log.Info("Image from Cloudnary Uploaded");
             }
             catch (Exception e)
             {
@@ -390,7 +391,7 @@ namespace ExpressBase.MessageQueue.MQServices
             return null;
         }
 
-        public string Post(FileMetaPersistRequest request)
+        private bool Persist(FileMetaPersistRequest request)
         {
             string tag = string.Empty;
             if (request.FileDetails.MetaDataDictionary != null)
@@ -415,7 +416,7 @@ namespace ExpressBase.MessageQueue.MQServices
             };
             var iCount = connectionFactory.DataDB.DoQuery(sql, parameters);
 
-            return null;
+            return (iCount.Rows.Count > 0);
         }
 
         public static Stream Resize(Image img, int newWidth, int newHeight)
@@ -437,22 +438,6 @@ namespace ExpressBase.MessageQueue.MQServices
             img.Save(ms, ImageFormat.Png);
             ms.Position = 0;
             return ms;
-        }
-
-        private void CloudinaryUpload(int ImageId, byte[] FileContents)
-        {
-            MemoryStream ImageStream = new MemoryStream(FileContents);
-            var uploadParams = new ImageUploadParams()
-            {
-                File = new FileDescription(ImageId.ToString(), ImageStream),
-                Transformation = new Transformation().Quality(40),
-                PublicId = "sample_id",
-
-            };
-            ImageUploadResult uploadResult = ClUploader.Upload(uploadParams);
-            CloudinaryResponseUrl CompressedUrl = new CloudinaryResponseUrl();
-            CompressedUrl.ImageUrl = uploadResult.SecureUri.AbsoluteUri;
-            this.MessageProducer3.Publish(CompressedUrl);
         }
 
         private int GetFileRefId()
