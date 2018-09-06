@@ -98,12 +98,12 @@ namespace ExpressBase.MessageQueue.MQServices
                         BToken = request.BToken,
                         RToken = request.RToken
                     });
-                    Log.Info("Uploaded to Cloudinary");
+                    Log.Info("-------------------------------------------------Pushed to Queue to upload to Cloudinary");
                 }
                 else
                 {
                     this.MessageProducer3.Publish(ImageReq);
-                    Log.Info("Pushed Original to Queue");
+                    Log.Info("-------------------------------------------------Pushed Original to Queue");
 
                 }
                 response.Close();
@@ -136,6 +136,8 @@ namespace ExpressBase.MessageQueue.MQServices
                 BToken = request.BToken,
                 RToken = request.RToken
             });
+
+            Log.Info("--------------------------------------Uploaded to Cloudinary");
 
             return null;
         }
@@ -222,8 +224,6 @@ namespace ExpressBase.MessageQueue.MQServices
 
         public string Post(UploadImageRequest request)
         {
-            Log.Info("Inside Upload Img MQ Service");
-
             try
             {
                 request.ImageInfo.FileStoreId = (new EbConnectionFactory(request.TenantAccountId, this.Redis)).FilesDB.UploadFile(
@@ -254,11 +254,13 @@ namespace ExpressBase.MessageQueue.MQServices
                         FileType = request.ImageInfo.FileType,
                         FileCategory = request.ImageInfo.FileCategory,
                         FileRefId = request.ImageInfo.FileRefId
-                    }
+                    },
+                    TenantAccountId = request.TenantAccountId,
+                    UserId = request.UserId
                 });
 
                 if (request.ImageInfo.ImageQuality == ImageQuality.large)
-                    Log.Info("Image from Cloudnary Uploaded");
+                    Log.Info("--------------------------------------------Image from Cloudinary Uploaded");
             }
             catch (Exception e)
             {
@@ -417,34 +419,26 @@ namespace ExpressBase.MessageQueue.MQServices
             return (iCount.Rows.Count > 0);
         }
 
-        public static Stream Resize(Image img, int newWidth, int newHeight)
-        {
-            if (newWidth != img.Width || newHeight != img.Height)
-            {
-                var ratioX = (double)newWidth / img.Width;
-                var ratioY = (double)newHeight / img.Height;
-                var ratio = Math.Max(ratioX, ratioY);
-                var width = (int)(img.Width * ratio);
-                var height = (int)(img.Height * ratio);
+        //public static Stream Resize(Image img, int newWidth, int newHeight)
+        //{
+        //    if (newWidth != img.Width || newHeight != img.Height)
+        //    {
+        //        var ratioX = (double)newWidth / img.Width;
+        //        var ratioY = (double)newHeight / img.Height;
+        //        var ratio = Math.Max(ratioX, ratioY);
+        //        var width = (int)(img.Width * ratio);
+        //        var height = (int)(img.Height * ratio);
 
-                var newImage = new Bitmap(width, height);
-                Graphics.FromImage(newImage).DrawImage(img, 0, 0, width, height);
-                img = newImage;
-            }
+        //        var newImage = new Bitmap(width, height);
+        //        Graphics.FromImage(newImage).DrawImage(img, 0, 0, width, height);
+        //        img = newImage;
+        //    }
 
-            var ms = new MemoryStream();
-            img.Save(ms, ImageFormat.Png);
-            ms.Position = 0;
-            return ms;
-        }
-
-        private int GetFileRefId()
-        {
-            string IdFetchQuery = @"INSERT into eb_files_ref(userid, filename) VALUES (1, 'test') RETURNING id";
-            var table = this.EbConnectionFactory.DataDB.DoQuery(IdFetchQuery);
-            int Id = (int)table.Rows[0][0];
-            return Id;
-        }
+        //    var ms = new MemoryStream();
+        //    img.Save(ms, ImageFormat.Png);
+        //    ms.Position = 0;
+        //    return ms;
+        //}
 
         private int GetFileRefId(EbConnectionFactory connectionFactory)
         {
@@ -452,20 +446,6 @@ namespace ExpressBase.MessageQueue.MQServices
             var table = connectionFactory.DataDB.DoQuery(IdFetchQuery);
             int Id = (int)table.Rows[0][0];
             return Id;
-        }
-
-        private int MapFilesWithUser(int CustomerId, int FileRefId)
-        {
-            int res = 0;
-            string MapQuery = @"INSERT into customer_files(customer_id, eb_files_ref_id) values(customer_id=@cust_id, eb_files_ref_id=@ref_id) returning id";
-            DbParameter[] MapParams =
-            {
-                        this.EbConnectionFactory.DataDB.GetNewParameter("cust_id", EbDbTypes.Int32, CustomerId),
-                        this.EbConnectionFactory.DataDB.GetNewParameter("ref_id", EbDbTypes.Int32, FileRefId)
-            };
-            var table = this.EbConnectionFactory.ObjectsDB.DoQuery(MapQuery);
-            res = (int)table.Rows[0][0];
-            return res;
         }
 
         private int MapFilesWithUser(EbConnectionFactory connectionFactory, int CustomerId, int FileRefId)
