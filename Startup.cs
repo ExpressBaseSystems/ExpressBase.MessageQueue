@@ -117,14 +117,15 @@ namespace ExpressBase.MessageQueue
 
             var mqServer = new RabbitMqServer(rabitFactory);
             mqServer.RetryCount = 1;
+
             mqServer.RegisterHandler<RefreshSolutionConnectionsRequest>(base.ExecuteMessage);
 
             mqServer.RegisterHandler<UploadFileRequest>(base.ExecuteMessage);
             mqServer.RegisterHandler<UploadImageRequest>(base.ExecuteMessage);
 
             mqServer.RegisterHandler<GetImageFtpRequest>(base.ExecuteMessage, 10);
-            mqServer.RegisterHandler<CloudinaryUploadReq>(base.ExecuteMessage);
-            mqServer.RegisterHandler<CloudinaryResponseUrl>(base.ExecuteMessage);
+            mqServer.RegisterHandler<CloudinaryUploadRequest>(base.ExecuteMessage);
+            mqServer.RegisterHandler<CloudinaryUploadResponse>(base.ExecuteMessage);
 
             mqServer.RegisterHandler<ExportApplicationRequest>(base.ExecuteMessage);
             mqServer.RegisterHandler<ImportApplicationRequest>(base.ExecuteMessage);
