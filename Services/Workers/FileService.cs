@@ -270,126 +270,126 @@ namespace ExpressBase.MessageQueue.MQServices
             return null;
         }
 
-        public string Post(ImageResizeRequest request)
-        {
-            UploadImageRequest uploadImageRequest = new UploadImageRequest();
-            uploadImageRequest.TenantAccountId = request.TenantAccountId;
-            uploadImageRequest.UserId = request.UserId;
+        //public string Post(ImageResizeRequest request)
+        //{
+        //    UploadImageRequest uploadImageRequest = new UploadImageRequest();
+        //    uploadImageRequest.TenantAccountId = request.TenantAccountId;
+        //    uploadImageRequest.UserId = request.UserId;
 
-            MemoryStream ms = new MemoryStream(request.ImageByte);
-            ms.Position = 0;
+        //    MemoryStream ms = new MemoryStream(request.ImageByte);
+        //    ms.Position = 0;
 
-            try
-            {
-                using (Image img = Image.FromStream(ms))
-                {
-                    if (request.ImageInfo.FileCategory == EbFileCategory.Dp)
-                    {
-                        foreach (string size in Enum.GetNames(typeof(DPSizes)))
-                        {
-                            int sz = (int)((DPSizes)Enum.Parse(typeof(DPSizes), size));
+        //    try
+        //    {
+        //        using (Image img = Image.FromStream(ms))
+        //        {
+        //            if (request.ImageInfo.FileCategory == EbFileCategory.Dp)
+        //            {
+        //                foreach (string size in Enum.GetNames(typeof(DPSizes)))
+        //                {
+        //                    int sz = (int)((DPSizes)Enum.Parse(typeof(DPSizes), size));
 
-                            Stream ImgStream = Resize(img, sz, sz);
-                            request.ImageByte = new byte[ImgStream.Length];
-                            ImgStream.Read(request.ImageByte, 0, request.ImageByte.Length);
+        //                    Stream ImgStream = Resize(img, sz, sz);
+        //                    request.ImageByte = new byte[ImgStream.Length];
+        //                    ImgStream.Read(request.ImageByte, 0, request.ImageByte.Length);
 
-                            uploadImageRequest.Byte = request.ImageByte;
-                            uploadImageRequest.ImageInfo = new ImageMeta()
-                            {
-                                FileName = String.Format("{0}_{1}.{2}", request.ImageInfo.FileStoreId, size, request.ImageInfo.FileType),
-                                MetaDataDictionary = (request.ImageInfo.MetaDataDictionary != null) ? request.ImageInfo.MetaDataDictionary : new Dictionary<String, List<string>>() { },
-                                FileType = request.ImageInfo.FileType,
-                                FileCategory = EbFileCategory.Dp,
-                                ImageQuality = ImageQuality.other
-                            };
-                            uploadImageRequest.AddAuth(request.BToken, request.RToken);
-                            this.MessageProducer3.Publish(uploadImageRequest);
-                        }
-                    }
-                    else if (request.ImageInfo.FileCategory == EbFileCategory.SolLogo)
-                    {
-                        foreach (string size in Enum.GetNames(typeof(LogoSizes)))
-                        {
-                            int sz = (int)Enum.Parse<LogoSizes>(size);
+        //                    uploadImageRequest.Byte = request.ImageByte;
+        //                    uploadImageRequest.ImageInfo = new ImageMeta()
+        //                    {
+        //                        FileName = String.Format("{0}_{1}.{2}", request.ImageInfo.FileStoreId, size, request.ImageInfo.FileType),
+        //                        MetaDataDictionary = (request.ImageInfo.MetaDataDictionary != null) ? request.ImageInfo.MetaDataDictionary : new Dictionary<String, List<string>>() { },
+        //                        FileType = request.ImageInfo.FileType,
+        //                        FileCategory = EbFileCategory.Dp,
+        //                        ImageQuality = ImageQuality.other
+        //                    };
+        //                    uploadImageRequest.AddAuth(request.BToken, request.RToken);
+        //                    this.MessageProducer3.Publish(uploadImageRequest);
+        //                }
+        //            }
+        //            else if (request.ImageInfo.FileCategory == EbFileCategory.SolLogo)
+        //            {
+        //                foreach (string size in Enum.GetNames(typeof(LogoSizes)))
+        //                {
+        //                    int sz = (int)Enum.Parse<LogoSizes>(size);
 
-                            Stream ImgStream = Resize(img, sz, sz);
-                            request.ImageByte = new byte[ImgStream.Length];
-                            ImgStream.Read(request.ImageByte, 0, request.ImageByte.Length);
+        //                    Stream ImgStream = Resize(img, sz, sz);
+        //                    request.ImageByte = new byte[ImgStream.Length];
+        //                    ImgStream.Read(request.ImageByte, 0, request.ImageByte.Length);
 
-                            uploadImageRequest.Byte = request.ImageByte;
-                            uploadImageRequest.ImageInfo = new ImageMeta()
-                            {
-                                FileName = String.Format("{0}_{1}.{2}", request.ImageInfo.FileStoreId, size, request.ImageInfo.FileType),
-                                MetaDataDictionary = (request.ImageInfo.MetaDataDictionary != null) ? request.ImageInfo.MetaDataDictionary : new Dictionary<String, List<string>>() { },
-                                FileType = request.ImageInfo.FileType,
-                                FileCategory = EbFileCategory.SolLogo,
-                                ImageQuality = ImageQuality.other
-                            };
-                            uploadImageRequest.AddAuth(request.BToken, request.RToken);
-                            this.MessageProducer3.Publish(uploadImageRequest);
-                        }
-                    }
-                    else if (request.ImageInfo.FileCategory == EbFileCategory.LocationFile)
-                    {
-                        foreach (string size in Enum.GetNames(typeof(LogoSizes)))
-                        {
-                            int sz = (int)Enum.Parse<LogoSizes>(size);
+        //                    uploadImageRequest.Byte = request.ImageByte;
+        //                    uploadImageRequest.ImageInfo = new ImageMeta()
+        //                    {
+        //                        FileName = String.Format("{0}_{1}.{2}", request.ImageInfo.FileStoreId, size, request.ImageInfo.FileType),
+        //                        MetaDataDictionary = (request.ImageInfo.MetaDataDictionary != null) ? request.ImageInfo.MetaDataDictionary : new Dictionary<String, List<string>>() { },
+        //                        FileType = request.ImageInfo.FileType,
+        //                        FileCategory = EbFileCategory.SolLogo,
+        //                        ImageQuality = ImageQuality.other
+        //                    };
+        //                    uploadImageRequest.AddAuth(request.BToken, request.RToken);
+        //                    this.MessageProducer3.Publish(uploadImageRequest);
+        //                }
+        //            }
+        //            else if (request.ImageInfo.FileCategory == EbFileCategory.LocationFile)
+        //            {
+        //                foreach (string size in Enum.GetNames(typeof(LogoSizes)))
+        //                {
+        //                    int sz = (int)Enum.Parse<LogoSizes>(size);
 
-                            Stream ImgStream = Resize(img, sz, sz);
-                            request.ImageByte = new byte[ImgStream.Length];
-                            ImgStream.Read(request.ImageByte, 0, request.ImageByte.Length);
+        //                    Stream ImgStream = Resize(img, sz, sz);
+        //                    request.ImageByte = new byte[ImgStream.Length];
+        //                    ImgStream.Read(request.ImageByte, 0, request.ImageByte.Length);
 
-                            uploadImageRequest.Byte = request.ImageByte;
-                            uploadImageRequest.ImageInfo = new ImageMeta()
-                            {
-                                FileName = String.Format("{0}_{1}.{2}", request.ImageInfo.FileStoreId, size, request.ImageInfo.FileType),
-                                MetaDataDictionary = (request.ImageInfo.MetaDataDictionary != null) ? request.ImageInfo.MetaDataDictionary : new Dictionary<String, List<string>>() { },
-                                FileType = request.ImageInfo.FileType,
-                                FileCategory = EbFileCategory.LocationFile
-                            };
+        //                    uploadImageRequest.Byte = request.ImageByte;
+        //                    uploadImageRequest.ImageInfo = new ImageMeta()
+        //                    {
+        //                        FileName = String.Format("{0}_{1}.{2}", request.ImageInfo.FileStoreId, size, request.ImageInfo.FileType),
+        //                        MetaDataDictionary = (request.ImageInfo.MetaDataDictionary != null) ? request.ImageInfo.MetaDataDictionary : new Dictionary<String, List<string>>() { },
+        //                        FileType = request.ImageInfo.FileType,
+        //                        FileCategory = EbFileCategory.LocationFile
+        //                    };
 
-                            uploadImageRequest.AddAuth(request.BToken, request.RToken);
-                            this.MessageProducer3.Publish(uploadImageRequest);
-                        }
-                    }
-                    else
-                    {
-                        foreach (string size in Enum.GetNames(typeof(ImageQuality)))
-                        {
+        //                    uploadImageRequest.AddAuth(request.BToken, request.RToken);
+        //                    this.MessageProducer3.Publish(uploadImageRequest);
+        //                }
+        //            }
+        //            else
+        //            {
+        //                foreach (string size in Enum.GetNames(typeof(ImageQuality)))
+        //                {
 
-                            int sz = (int)Enum.Parse<ImageQuality>(size);
+        //                    int sz = (int)Enum.Parse<ImageQuality>(size);
 
-                            if (sz > 1 && sz < 500)
-                            {
-                                Stream ImgStream = Resize(img, sz, sz);
+        //                    if (sz > 1 && sz < 500)
+        //                    {
+        //                        Stream ImgStream = Resize(img, sz, sz);
 
-                                request.ImageByte = new byte[ImgStream.Length];
-                                ImgStream.Read(request.ImageByte, 0, request.ImageByte.Length);
+        //                        request.ImageByte = new byte[ImgStream.Length];
+        //                        ImgStream.Read(request.ImageByte, 0, request.ImageByte.Length);
 
-                                uploadImageRequest.ImageInfo = new ImageMeta()
-                                {
-                                    FileName = String.Format("{0}_{1}.{2}", request.ImageInfo.FileStoreId, size, request.ImageInfo.FileType),
-                                    MetaDataDictionary = (request.ImageInfo.MetaDataDictionary != null) ? request.ImageInfo.MetaDataDictionary : new Dictionary<String, List<string>>() { },
-                                    FileType = request.ImageInfo.FileType,
-                                    FileCategory = EbFileCategory.Images,
-                                    ImageQuality = Enum.Parse<ImageQuality>(size),
-                                    FileRefId = request.ImageInfo.FileRefId // Not needed resized images are not updated in eb_files_ref
-                                };
-                                uploadImageRequest.Byte = request.ImageByte;
+        //                        uploadImageRequest.ImageInfo = new ImageMeta()
+        //                        {
+        //                            FileName = String.Format("{0}_{1}.{2}", request.ImageInfo.FileStoreId, size, request.ImageInfo.FileType),
+        //                            MetaDataDictionary = (request.ImageInfo.MetaDataDictionary != null) ? request.ImageInfo.MetaDataDictionary : new Dictionary<String, List<string>>() { },
+        //                            FileType = request.ImageInfo.FileType,
+        //                            FileCategory = EbFileCategory.Images,
+        //                            ImageQuality = Enum.Parse<ImageQuality>(size),
+        //                            FileRefId = request.ImageInfo.FileRefId // Not needed resized images are not updated in eb_files_ref
+        //                        };
+        //                        uploadImageRequest.Byte = request.ImageByte;
 
-                                uploadImageRequest.AddAuth(request.BToken, request.RToken);
-                                this.MessageProducer3.Publish(uploadImageRequest);
-                            }
-                        }
-                    }
-                }
-            }
-            catch (Exception e)
-            {
-                Log.Info("Exception:" + e.ToString());
-            }
-            return null;
-        }
+        //                        uploadImageRequest.AddAuth(request.BToken, request.RToken);
+        //                        this.MessageProducer3.Publish(uploadImageRequest);
+        //                    }
+        //                }
+        //            }
+        //        }
+        //    }
+        //    catch (Exception e)
+        //    {
+        //        Log.Info("Exception:" + e.ToString());
+        //    }
+        //    return null;
+        //}
 
         private bool Persist(FileMetaPersistRequest request)
         {
