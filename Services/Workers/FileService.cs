@@ -28,9 +28,7 @@ namespace ExpressBase.MessageQueue.MQServices
     [Restrict(InternalOnly = true)]
     public class FileServiceInternal : EbMqBaseService
     {
-        public FileServiceInternal(IMessageProducer _mqp, IMessageQueueClient _mqc, IEbServerEventClient _sec) : base(_mqp, _mqc, _sec)
-        {
-        }
+        public FileServiceInternal(IMessageProducer _mqp, IMessageQueueClient _mqc, IEbServerEventClient _sec) : base(_mqp, _mqc, _sec) { }
 
         Cloudinary ClUploader;
 
@@ -131,7 +129,7 @@ namespace ExpressBase.MessageQueue.MQServices
 
             this.MessageProducer3.Publish(new CloudinaryResponseUrl()
             {
-                ImageUrl  = uploadResult.SecureUri.AbsoluteUri,
+                ImageUrl = uploadResult.SecureUri.AbsoluteUri,
                 ImageKey = uploadResult.PublicId.ToInt(),
                 UserId = request.UserId,
                 TenantAccountId = request.TenantAccountId,
@@ -211,7 +209,7 @@ namespace ExpressBase.MessageQueue.MQServices
                 TenantAccountId = CompressedImageUrl.TenantAccountId,
                 BToken = CompressedImageUrl.BToken,
                 RToken = CompressedImageUrl.RToken,
-                
+
             });
 
             return null;
