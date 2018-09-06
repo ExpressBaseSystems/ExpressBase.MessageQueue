@@ -49,6 +49,23 @@ namespace ExpressBase.MessageQueue.MQServices
             FtpWebRequest req = null;
             FtpWebResponse response = null;
 
+            UploadImageRequest ImageReq = new UploadImageRequest()
+            {
+                ImageInfo = new ImageMeta()
+                {
+                    FileCategory = EbFileCategory.Images,
+                    FileName = request.FileUrl.Value,
+                    FileType = request.FileUrl.Value.Split('.').Last(),
+                    ImageQuality = ImageQuality.original,
+                    MetaDataDictionary = new Dictionary<string, List<string>>(),
+                    FileRefId = GetFileRefId(_ebConnectionFactory),
+                },
+                UserId = request.UserId,
+                TenantAccountId = request.TenantAccountId,
+                BToken = request.BToken,
+                RToken = request.RToken
+            };
+
             byte[] fByte;
 
             try
@@ -59,7 +76,9 @@ namespace ExpressBase.MessageQueue.MQServices
                 response = (FtpWebResponse)req.GetResponse();
                 Console.WriteLine("File Recieved : " + request.FileUrl.Value);
                 Stream responseStream = response.GetResponseStream();
-                fByte = new byte[response.ContentLength];
+                ImageReq.Byte = new byte[response.ContentLength];
+                ImageReq.ImageInfo.Length = ImageReq.Byte.Length;
+                bool compress = (response.ContentLength > 5005000) ? true : false;
                 byte[] buffer = new byte[2048];
                 int ReadCount = 0, FileOffset = 0;
                 do
@@ -68,7 +87,7 @@ namespace ExpressBase.MessageQueue.MQServices
 
                     for (int i = 0; i < ReadCount; i++)
                     {
-                        fByte.SetValue(buffer[i], FileOffset);
+                        ImageReq.Byte.SetValue(buffer[i], FileOffset);
                         FileOffset++;
                     }
                 }
@@ -76,13 +95,19 @@ namespace ExpressBase.MessageQueue.MQServices
 
                 if (MapFilesWithUser(_ebConnectionFactory, request.FileUrl.Key, request.FileUrl.Key) < 1)
                     throw new Exception("File Mapping Failed");
-                this.MessageProducer3.Publish(
+                if (compress)
+                {
+                    this.MessageProducer3.Publish(
                     new CloudinaryUploadReq()
                     {
                         ImageKey = request.FileUrl.Key,
-                        ImageBytes = fByte
+                        ImageBytes = ImageReq.Byte
                     });
-
+                }
+                else
+                {
+                    this.MessageProducer3.Publish(ImageReq);
+                }
                 response.Close();
             }
             catch (WebException ex)
