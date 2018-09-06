@@ -118,7 +118,7 @@ namespace ExpressBase.MessageQueue
             var mqServer = new RabbitMqServer(rabitFactory);
             mqServer.RetryCount = 1;
             mqServer.RegisterHandler<RefreshSolutionConnectionsRequest>(base.ExecuteMessage);
-            mqServer.RegisterHandler<GetImageFtpRequest>(base.ExecuteMessage);
+            mqServer.RegisterHandler<GetImageFtpRequest>(base.ExecuteMessage, 20);
             mqServer.RegisterHandler<UploadImageRequest>(base.ExecuteMessage);
             mqServer.RegisterHandler<UploadFileRequest>(base.ExecuteMessage);
             mqServer.RegisterHandler<ImageResizeRequest>(base.ExecuteMessage);
@@ -126,6 +126,8 @@ namespace ExpressBase.MessageQueue
             mqServer.RegisterHandler<ExportApplicationRequest>(base.ExecuteMessage);
             mqServer.RegisterHandler<ImportApplicationRequest>(base.ExecuteMessage);
             mqServer.RegisterHandler<EmailServicesRequest>(base.ExecuteMessage);
+            mqServer.RegisterHandler<CloudinaryUploadReq>(base.ExecuteMessage);
+            mqServer.RegisterHandler<CloudinaryResponseUrl>(base.ExecuteMessage);
             //mqServer.RegisterHandler<EmailServicesMqRequest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<SMSSentMqRequest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<SMSStatusLogMqRequest>(base.ExecuteMessage);

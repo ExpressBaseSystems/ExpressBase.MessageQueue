@@ -48,33 +48,18 @@ namespace ExpressBase.MessageQueue.MQServices
             string Password = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_FTP_PASSWORD);
             FtpWebRequest req = null;
             FtpWebResponse response = null;
-            UploadImageRequest ImageReq = new UploadImageRequest()
-            {
-                ImageInfo = new ImageMeta()
-                {
-                    FileCategory = EbFileCategory.Images,
-                    FileName = /*request.FileUrl.Value*/"ftp://35.200.199.41/files/Softfiles_L/39316/DICOM/000_DSC00423.JPG",
-                    FileType = /*request.FileUrl.Value*/"ftp://35.200.199.41/files/Softfiles_L/39316/DICOM/000_DSC00423.JPG".Split('.').Last(),
-                    ImageQuality = ImageQuality.original,
-                    MetaDataDictionary = new Dictionary<string, List<string>>(),
-                    FileRefId = GetFileRefId(_ebConnectionFactory),
-                },
-                UserId = request.UserId,
-                TenantAccountId = request.TenantAccountId,
-                BToken = request.BToken,
-                RToken = request.RToken
-            };
+
+            byte[] fByte;
 
             try
             {
-                req = (FtpWebRequest)WebRequest.Create(/*request.FileUrl.Value*/"ftp://35.200.199.41/files/Softfiles_L/39316/DICOM/000_DSC00423.JPG");//fullpath + name);
+                req = (FtpWebRequest)WebRequest.Create(request.FileUrl.Value);//fullpath + name);
                 req.Method = WebRequestMethods.Ftp.DownloadFile;
                 req.Credentials = new NetworkCredential(UserName, Password);
                 response = (FtpWebResponse)req.GetResponse();
-                Console.WriteLine("File Recieved : " + /*request.FileUrl.Value*/"ftp://35.200.199.41/files/Softfiles_L/39316/DICOM/000_DSC00423.JPG");
+                Console.WriteLine("File Recieved : " + request.FileUrl.Value);
                 Stream responseStream = response.GetResponseStream();
-                ImageReq.Byte = new byte[response.ContentLength];
-                ImageReq.ImageInfo.Length = response.ContentLength;
+                fByte = new byte[response.ContentLength];
                 byte[] buffer = new byte[2048];
                 int ReadCount = 0, FileOffset = 0;
                 do
@@ -83,35 +68,33 @@ namespace ExpressBase.MessageQueue.MQServices
 
                     for (int i = 0; i < ReadCount; i++)
                     {
-                        ImageReq.Byte.SetValue(buffer[i], FileOffset);
+                        fByte.SetValue(buffer[i], FileOffset);
                         FileOffset++;
                     }
                 }
                 while (ReadCount > 0);
 
-                //MemoryStream ms = new MemoryStream(resp.Byte);
-                //ms.Position = 0;
-
-                //using (Image img = Image.FromStream(ms))
-                //{
-                //    Stream ImgStream = Resize(img, (int)ImageQuality.large, (int)ImageQuality.large);
-
-                  //  resp.Byte = new byte[ImgStream.Length];
-                   // ImgStream.Read(resp.Byte, 0, resp.Byte.Length);
-                //}
-
                 if (MapFilesWithUser(_ebConnectionFactory, request.FileUrl.Key, request.FileUrl.Key) < 1)
                     throw new Exception("File Mapping Failed");
+                this.MessageProducer3.Publish(
+                    new CloudinaryUploadReq()
+                    {
+                        ImageKey = request.FileUrl.Key,
+                        ImageBytes = fByte
+                    });
 
-                CloudinaryUpload(request.FileUrl.Key, ImageReq.Byte);
-
-                //this.MessageProducer3.Publish(ImageReq);
                 response.Close();
             }
             catch (WebException ex)
             {
                 Console.WriteLine("Exception (FileName: " + request.FileUrl.Value + "): " + ex.Message);
             }
+            return null;
+        }
+
+        public string Post(CloudinaryUploadReq request)
+        {
+            CloudinaryUpload(request.ImageKey, request.ImageBytes);
             return null;
         }
 
@@ -166,7 +149,7 @@ namespace ExpressBase.MessageQueue.MQServices
             return null;
         }
 
-        public void Post(CloudinaryResponseUrl CompressedImageUrl)
+        public string Post(CloudinaryResponseUrl CompressedImageUrl)
         {
             FlurlRequest CloudinaryRequest = new FlurlRequest(CompressedImageUrl.ImageUrl);
             HttpResponseMessage CompressedImageResponse = Send(CloudinaryRequest).Result;
@@ -176,7 +159,9 @@ namespace ExpressBase.MessageQueue.MQServices
                 ImageInfo = new ImageMeta(),
                 Byte = CompressedImageBytes,
             };
+
             this.MessageProducer3.Publish(ImageReq);
+            return null;
         }
 
         async Task<HttpResponseMessage> Send(Flurl.Http.FlurlRequest flurlRequest)
@@ -428,8 +413,6 @@ namespace ExpressBase.MessageQueue.MQServices
             ms.Position = 0;
             return ms;
         }
-
-
 
         private void CloudinaryUpload(int ImageId, byte[] FileContents)
         {
