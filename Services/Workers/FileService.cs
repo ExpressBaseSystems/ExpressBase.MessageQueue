@@ -19,6 +19,9 @@ using System.Linq;
 using System.Net;
 using CloudinaryDotNet;
 using CloudinaryDotNet.Actions;
+using Flurl.Http;
+using System.Net.Http;
+using System.Threading.Tasks;
 
 namespace ExpressBase.MessageQueue.MQServices
 {
@@ -162,6 +165,24 @@ namespace ExpressBase.MessageQueue.MQServices
                 return null;
             }
             return null;
+        }
+
+        public void Post(CloudinaryResponseUrl CompressedImageUrl)
+        {
+            FlurlRequest CloudinaryRequest = new FlurlRequest(CompressedImageUrl.ImageUrl);
+            HttpResponseMessage CompressedImageResponse = Send(CloudinaryRequest).Result;
+            byte[] CompressedImageBytes = CompressedImageResponse.Content.ReadAsByteArrayAsync().Result;
+            UploadImageRequest ImageReq = new UploadImageRequest()
+            {
+                ImageInfo = new ImageMeta(),
+                Byte = CompressedImageBytes,
+            };
+            this.MessageProducer3.Publish(ImageReq);
+        }
+
+        async Task<HttpResponseMessage> Send(Flurl.Http.FlurlRequest flurlRequest)
+        {
+            return await flurlRequest.SendAsync(System.Net.Http.HttpMethod.Get);
         }
 
         public string Post(UploadImageRequest request)
@@ -422,6 +443,9 @@ namespace ExpressBase.MessageQueue.MQServices
 
             };
             ImageUploadResult uploadResult = ClUploader.Upload(uploadParams);
+            CloudinaryResponseUrl CompressedUrl = new CloudinaryResponseUrl();
+            CompressedUrl.ImageUrl = uploadResult.SecureUri.AbsoluteUri;
+            this.MessageProducer3.Publish(CompressedUrl);
         }
 
         private int GetFileRefId()
