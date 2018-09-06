@@ -6,6 +6,7 @@
 
   <ItemGroup>
     <None Remove="robots.txt" />
+   <!--<None Remove="Services\Workers\ImportExportService.cs~RF20134bdb.TMP" />-->
   </ItemGroup>
 
   <ItemGroup>
@@ -33,6 +34,7 @@
   <ItemGroup>
     <ProjectReference Include="..\ExpressBase.Common\ExpressBase.Common.csproj" />
     <ProjectReference Include="..\ExpressBase.Objects\ExpressBase.Objects.csproj" />
+    <ProjectReference Include="..\ExpressBase.ServiceStack\ExpressBase.ServiceStack.csproj" />
   </ItemGroup>
 
 </Project>

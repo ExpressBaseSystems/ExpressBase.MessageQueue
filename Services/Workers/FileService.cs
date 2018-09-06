@@ -43,7 +43,6 @@ namespace ExpressBase.MessageQueue.MQServices
         public string Post(GetImageFtpRequest request)
         {
             EbConnectionFactory _ebConnectionFactory = new EbConnectionFactory(request.TenantAccountId, this.Redis);
-
             string Host = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_FTP_HOST);
             string UserName = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_FTP_USER);
             string Password = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_FTP_PASSWORD);
@@ -54,8 +53,8 @@ namespace ExpressBase.MessageQueue.MQServices
                 ImageInfo = new ImageMeta()
                 {
                     FileCategory = EbFileCategory.Images,
-                    FileName = request.FileUrl.Value,
-                    FileType = request.FileUrl.Value.Split('.').Last(),
+                    FileName = /*request.FileUrl.Value*/"ftp://35.200.199.41/files/Softfiles_L/39316/DICOM/000_DSC00423.JPG",
+                    FileType = /*request.FileUrl.Value*/"ftp://35.200.199.41/files/Softfiles_L/39316/DICOM/000_DSC00423.JPG".Split('.').Last(),
                     ImageQuality = ImageQuality.original,
                     MetaDataDictionary = new Dictionary<string, List<string>>(),
                     FileRefId = GetFileRefId(_ebConnectionFactory),
@@ -68,11 +67,11 @@ namespace ExpressBase.MessageQueue.MQServices
 
             try
             {
-                req = (FtpWebRequest)WebRequest.Create(request.FileUrl.Value);//fullpath + name);
+                req = (FtpWebRequest)WebRequest.Create(/*request.FileUrl.Value*/"ftp://35.200.199.41/files/Softfiles_L/39316/DICOM/000_DSC00423.JPG");//fullpath + name);
                 req.Method = WebRequestMethods.Ftp.DownloadFile;
                 req.Credentials = new NetworkCredential(UserName, Password);
                 response = (FtpWebResponse)req.GetResponse();
-                Console.WriteLine("File Recieved : " + request.FileUrl.Value);
+                Console.WriteLine("File Recieved : " + /*request.FileUrl.Value*/"ftp://35.200.199.41/files/Softfiles_L/39316/DICOM/000_DSC00423.JPG");
                 Stream responseStream = response.GetResponseStream();
                 ImageReq.Byte = new byte[response.ContentLength];
                 ImageReq.ImageInfo.Length = response.ContentLength;
