@@ -144,7 +144,7 @@ namespace ExpressBase.MessageQueue.MQServices
             try
             {
                 request.ImageInfo.FileStoreId = (new EbConnectionFactory(request.SolnId, this.Redis)).FilesDB.UploadFile(
-                    request.ImageInfo.FileName,
+                    ((request.ImageInfo.FileName != null) ? request.ImageInfo.FileName : String.Empty),
                     (request.ImageInfo.MetaDataDictionary != null) ? request.ImageInfo.MetaDataDictionary : new Dictionary<String, List<string>>() { },
                     request.Byte,
                     request.ImageInfo.FileCategory
@@ -204,7 +204,7 @@ namespace ExpressBase.MessageQueue.MQServices
                         connectionFactory.DataDB.GetNewParameter("userid", EbDbTypes.Int32, request.UserId),
                         connectionFactory.DataDB.GetNewParameter("filestoreid",EbDbTypes.String, request.FileDetails.FileStoreId),
                         connectionFactory.DataDB.GetNewParameter("refid",EbDbTypes.Int32, request.FileDetails.FileRefId),
-                        connectionFactory.DataDB.GetNewParameter("filename",EbDbTypes.String, request.FileDetails.FileName != null ? request.FileDetails.FileName: "Empty"),
+                        connectionFactory.DataDB.GetNewParameter("filename",EbDbTypes.String, ((request.FileDetails.FileName != null) ? request.FileDetails.FileName : String.Empty)),
                         connectionFactory.DataDB.GetNewParameter("length",EbDbTypes.Int64, request.FileDetails.Length),
                         connectionFactory.DataDB.GetNewParameter("filetype",EbDbTypes.String, (String.IsNullOrEmpty(request.FileDetails.FileType))? StaticFileConstants.PNG : request.FileDetails.FileType),
                         connectionFactory.DataDB.GetNewParameter("tags",EbDbTypes.String, tag),
