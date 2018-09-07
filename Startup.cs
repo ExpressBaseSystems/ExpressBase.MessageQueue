@@ -117,16 +117,24 @@ namespace ExpressBase.MessageQueue
 
             var mqServer = new RabbitMqServer(rabitFactory);
             mqServer.RetryCount = 1;
+
             mqServer.RegisterHandler<RefreshSolutionConnectionsRequest>(base.ExecuteMessage);
-            mqServer.RegisterHandler<GetImageFtpRequest>(base.ExecuteMessage);
-            mqServer.RegisterHandler<UploadImageRequest>(base.ExecuteMessage);
+
             mqServer.RegisterHandler<UploadFileRequest>(base.ExecuteMessage);
-            mqServer.RegisterHandler<ImageResizeRequest>(base.ExecuteMessage);
-            mqServer.RegisterHandler<FileMetaPersistRequest>(base.ExecuteMessage);
+            mqServer.RegisterHandler<UploadImageRequest>(base.ExecuteMessage);
+
+            mqServer.RegisterHandler<GetImageFtpRequest>(base.ExecuteMessage, 10);
+            mqServer.RegisterHandler<CloudinaryUploadRequest>(base.ExecuteMessage);
+            mqServer.RegisterHandler<CloudinaryUploadResponse>(base.ExecuteMessage);
+
             mqServer.RegisterHandler<ExportApplicationRequest>(base.ExecuteMessage);
             mqServer.RegisterHandler<ImportApplicationRequest>(base.ExecuteMessage);
+
             mqServer.RegisterHandler<EmailServicesRequest>(base.ExecuteMessage);
             mqServer.RegisterHandler<PdfCreateServiceRequest>(base.ExecuteMessage);
+
+            //mqServer.RegisterHandler<ImageResizeRequest>(base.ExecuteMessage);
+            //mqServer.RegisterHandler<FileMetaPersistRequest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<EmailServicesMqRequest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<SMSSentMqRequest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<SMSStatusLogMqRequest>(base.ExecuteMessage);
@@ -193,9 +201,9 @@ namespace ExpressBase.MessageQueue
                                 {
                                     RequestContext.Instance.Items.Add(CoreConstants.SOLUTION_ID, c.Value);
                                     if (requestDto is IEbSSRequest)
-                                        (requestDto as IEbSSRequest).TenantAccountId = c.Value;
-                                    if (requestDto is EbServiceStackRequest)
-                                        (requestDto as EbServiceStackRequest).TenantAccountId = c.Value;
+                                        (requestDto as IEbSSRequest).SolnId = c.Value;
+                                    if (requestDto is EbServiceStackAuthRequest)
+                                        (requestDto as EbServiceStackAuthRequest).SolnId = c.Value;
                                     continue;
                                 }
                                 if (c.Type == "uid" && !string.IsNullOrEmpty(c.Value))
@@ -203,22 +211,22 @@ namespace ExpressBase.MessageQueue
                                     RequestContext.Instance.Items.Add("UserId", Convert.ToInt32(c.Value));
                                     if (requestDto is IEbSSRequest)
                                         (requestDto as IEbSSRequest).UserId = Convert.ToInt32(c.Value);
-                                    if (requestDto is EbServiceStackRequest)
-                                        (requestDto as EbServiceStackRequest).UserId = Convert.ToInt32(c.Value);
+                                    if (requestDto is EbServiceStackAuthRequest)
+                                        (requestDto as EbServiceStackAuthRequest).UserId = Convert.ToInt32(c.Value);
                                     continue;
                                 }
                                 if (c.Type == "wc" && !string.IsNullOrEmpty(c.Value))
                                 {
                                     RequestContext.Instance.Items.Add("wc", c.Value);
-                                    if (requestDto is EbServiceStackRequest)
-                                        (requestDto as EbServiceStackRequest).WhichConsole = c.Value.ToString();
+                                    if (requestDto is EbServiceStackAuthRequest)
+                                        (requestDto as EbServiceStackAuthRequest).WhichConsole = c.Value.ToString();
                                     continue;
                                 }
                                 if (c.Type == "sub" && !string.IsNullOrEmpty(c.Value))
                                 {
                                     RequestContext.Instance.Items.Add("sub", c.Value);
-                                    if (requestDto is EbServiceStackRequest)
-                                        (requestDto as EbServiceStackRequest).UserAuthId = c.Value.ToString();
+                                    if (requestDto is EbServiceStackAuthRequest)
+                                        (requestDto as EbServiceStackAuthRequest).UserAuthId = c.Value.ToString();
                                     continue;
                                 }
                             }

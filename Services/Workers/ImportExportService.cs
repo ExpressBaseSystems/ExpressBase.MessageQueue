@@ -31,7 +31,7 @@ namespace ExpressBase.MessageQueue.Services.Workers
                 Refids = request.Refids,
                 BToken = this.ServerEventClient.BearerToken,
                 RToken = this.ServerEventClient.RefreshToken,
-                TenantAccountId = request.TenantAccountId,
+                SolnId = request.SolnId,
                 UserId = request.UserId,
                 UserAuthId = request.UserAuthId,
                 WhichConsole = request.WhichConsole
@@ -47,7 +47,7 @@ namespace ExpressBase.MessageQueue.Services.Workers
                 Id = request.Id,
                 BToken = this.ServerEventClient.BearerToken,
                 RToken = this.ServerEventClient.RefreshToken,
-                TenantAccountId = request.TenantAccountId,
+                SolnId = request.SolnId,
                 UserId = request.UserId,
                 UserAuthId = request.UserAuthId,
                 WhichConsole = request.WhichConsole
@@ -90,7 +90,7 @@ namespace ExpressBase.MessageQueue.Services.Workers
                         Description = AppObj.Description,
                         Icon = AppObj.Icon
                     },
-                    TenantAccountId = request.TenantAccountId,
+                    SolnId = request.SolnId,
                     UserId = request.UserId,
                     UserAuthId = request.UserAuthId,
                     WhichConsole = request.WhichConsole
@@ -114,7 +114,7 @@ namespace ExpressBase.MessageQueue.Services.Workers
                 AppWrapper AppObj = ServiceStackClient.Get(new GetOneFromAppStoreRequest
                 {
                     Id = request.Id,
-                    TenantAccountId = request.TenantAccountId,
+                    SolnId = request.SolnId,
                     UserAuthId = request.UserAuthId,
                     UserId = request.UserId,
                     WhichConsole = request.WhichConsole,
@@ -164,7 +164,7 @@ namespace ExpressBase.MessageQueue.Services.Workers
                         SourceSolutionId = (obj.RefId.Split("-"))[0],
                         SourceObjId = (obj.RefId.Split("-"))[3],
                         SourceVerID = (obj.RefId.Split("-"))[4],
-                        TenantAccountId = request.TenantAccountId,
+                        SolnId = request.SolnId,
                         UserId = request.UserId,
                         UserAuthId = request.UserAuthId,
                         WhichConsole = request.WhichConsole
