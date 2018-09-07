@@ -58,28 +58,14 @@ namespace ExpressBase.MessageQueue.MQServices
 
             try
             {
-                req = (FtpWebRequest)WebRequest.Create(request.FileUrl.Value);//fullpath + name);
-                req.Method = WebRequestMethods.Ftp.DownloadFile;
-                req.Credentials = new NetworkCredential(UserName, Password);
-                response = (FtpWebResponse)req.GetResponse();
+
+                ImageReq.Byte = _ebConnectionFactory.FTP.Download(request.FileUrl.Value);
+
                 Console.WriteLine("File Recieved : " + request.FileUrl.Value);
-                Stream responseStream = response.GetResponseStream();
-                ImageReq.Byte = new byte[response.ContentLength];
+
                 ImageReq.ImageInfo.Length = ImageReq.Byte.Length;
                 bool compress = (response.ContentLength > 1048576) ? true : false;
-                byte[] buffer = new byte[2048];
-                int ReadCount = 0, FileOffset = 0;
-                do
-                {
-                    ReadCount = responseStream.Read(buffer, 0, buffer.Length);
-
-                    for (int i = 0; i < ReadCount; i++)
-                    {
-                        ImageReq.Byte.SetValue(buffer[i], FileOffset);
-                        FileOffset++;
-                    }
-                }
-                while (ReadCount > 0);
+                
 
                 if (MapFilesWithUser(_ebConnectionFactory, request.FileUrl.Key, request.FileUrl.Key) < 1)
                     throw new Exception("File Mapping Failed");
