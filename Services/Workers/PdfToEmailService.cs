@@ -75,7 +75,7 @@ namespace ExpressBase.MessageQueue.Services.Workers
                 Subject = ebEmailTemplate.Subject,
                 UserId = request.UserId,
                 UserAuthId = request.UserAuthId,
-                TenantAccountId = request.TenantAccountId,
+                SolnId = request.SolnId,
                 AttachmentReport = RepRes.StreamWrapper,
                 AttachmentName=RepRes.ReportName
             });
