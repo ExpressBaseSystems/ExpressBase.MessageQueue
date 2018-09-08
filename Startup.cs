@@ -132,7 +132,6 @@ namespace ExpressBase.MessageQueue
             mqServer.RegisterHandler<EmailServicesRequest>(base.ExecuteMessage);
             mqServer.RegisterHandler<PdfCreateServiceRequest>(base.ExecuteMessage);
 
-            mqServer.DisablePublishingResponses = true;
             //mqServer.RegisterHandler<ImageResizeRequest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<FileMetaPersistRequest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<EmailServicesMqRequest>(base.ExecuteMessage);
