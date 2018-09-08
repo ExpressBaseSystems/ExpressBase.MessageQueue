@@ -340,16 +340,20 @@ namespace ExpressBase.MessageQueue.MQServices
                     throw new Exception("File Mapping Failed");
                 if (compress)
                 {
-                    this.MessageProducer3.Publish(
-                        new CloudinaryUploadRequest()
-                        {
-                            ImageInfo = ImageReq.ImageInfo,
-                            ImageBytes = ImageReq.Byte,
-                            UserId = request.UserId,
-                            SolnId = request.SolnId,
-                            BToken = request.BToken,
-                            RToken = request.RToken
-                        });
+                    CloudinaryUploadRequest cloudinaryUpload = new CloudinaryUploadRequest()
+                    {
+                        ImageInfo = ImageReq.ImageInfo,
+                        ImageBytes = ImageReq.Byte,
+                        UserId = request.UserId,
+                        SolnId = request.SolnId,
+                        BToken = request.BToken,
+                        RToken = request.RToken
+                    };
+
+                    cloudinaryUpload.ImageInfo.ImgManipulationServiceId = _ebConnectionFactory.ImageManipulate.InfraConId;
+
+                    this.MessageProducer3.Publish(cloudinaryUpload);
+
                     Log.Info("-------------------------------------------------Pushed to Queue to upload to Cloudinary");
                 }
                 else
@@ -366,7 +370,8 @@ namespace ExpressBase.MessageQueue.MQServices
 
         public string Post(CloudinaryUploadRequest request)
         {
-            string url = (new EbConnectionFactory(request.SolnId, this.Redis)).ImageManipulate.Resize
+            EbConnectionFactory _ebConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
+            string url = _ebConnectionFactory.ImageManipulate.Resize
                 (request.ImageBytes, request.ImageInfo, (int)(52428800 / request.ImageBytes.Length));
 
             FlurlRequest CloudinaryRequest = new FlurlRequest(url);
@@ -385,7 +390,7 @@ namespace ExpressBase.MessageQueue.MQServices
                     Length = CompressedImageBytes.Length,
                     MetaDataDictionary = (request.ImageInfo.MetaDataDictionary != null) ? request.ImageInfo.MetaDataDictionary : new Dictionary<String, List<string>>() { },
                     FileRefId = request.ImageInfo.FileRefId,
-                    ImageQuality = ImageQuality.large,
+                    ImageQuality = ImageQuality.original,
                     ImgManipulationServiceId = request.ImageInfo.ImgManipulationServiceId
                 },
                 Byte = CompressedImageBytes,
