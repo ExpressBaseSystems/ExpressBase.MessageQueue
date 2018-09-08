@@ -7,19 +7,14 @@ using ExpressBase.Common.ServerEvents_Artifacts;
 using ExpressBase.Common.ServiceClients;
 using ExpressBase.Common.Structures;
 using ExpressBase.MessageQueue.Services;
+using Flurl.Http;
 using ServiceStack;
 using ServiceStack.Messaging;
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
-using System.Drawing;
-using System.Drawing.Imaging;
-using System.IO;
 using System.Linq;
 using System.Net;
-using CloudinaryDotNet;
-using CloudinaryDotNet.Actions;
-using Flurl.Http;
 using System.Net.Http;
 using System.Threading.Tasks;
 
@@ -29,70 +24,6 @@ namespace ExpressBase.MessageQueue.MQServices
     public class FileServiceInternal : EbMqBaseService
     {
         public FileServiceInternal(IMessageProducer _mqp, IMessageQueueClient _mqc, IEbServerEventClient _sec) : base(_mqp, _mqc, _sec) { }
-
-        public string Post(GetImageFtpRequest request)
-        {
-            EbConnectionFactory _ebConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
-
-            UploadImageRequest ImageReq = new UploadImageRequest()
-            {
-                ImageInfo = new ImageMeta()
-                {
-                    FileCategory = EbFileCategory.Images,
-                    FileName = request.FileUrl.Value.Split('/').Last(),
-                    FileType = request.FileUrl.Value.Split('.').Last(),
-                    ImageQuality = ImageQuality.original,
-                    MetaDataDictionary = new Dictionary<string, List<string>>(),
-                },
-                UserId = request.UserId,
-                SolnId = request.SolnId,
-                BToken = request.BToken,
-                RToken = request.RToken
-            };
-
-            try
-            {
-                ImageReq.Byte = _ebConnectionFactory.FTP.Download(request.FileUrl.Value);
-
-                Console.WriteLine("File Recieved : " + request.FileUrl.Value);
-
-                ImageReq.ImageInfo.Length = ImageReq.Byte.Length;
-                bool compress = (ImageReq.Byte.Length > 1048576) ? true : false;
-
-                ImageReq.ImageInfo.FileRefId = UploadImageRequest.GetFileRefId(_ebConnectionFactory.DataDB);
-
-                if (MapFilesWithUser(_ebConnectionFactory, request.FileUrl.Key, ImageReq.ImageInfo.FileRefId) < 1)
-                    throw new Exception("File Mapping Failed");
-                if (compress)
-                {
-                    this.MessageProducer3.Publish(
-                        new CloudinaryUploadRequest()
-                        {
-                            ImageInfo = new ImageMeta()
-                            {
-                                FileRefId = ImageReq.ImageInfo.FileRefId,
-                                FileName = request.FileUrl.Value.Split('/').Last(),
-                                ImgManipulationServiceId = _ebConnectionFactory.ImageManipulate.InfraConId
-                            },
-                            ImageBytes = ImageReq.Byte,
-                            UserId = request.UserId,
-                            SolnId = request.SolnId,
-                            BToken = request.BToken,
-                            RToken = request.RToken
-                        });
-                    Log.Info("-------------------------------------------------Pushed to Queue to upload to Cloudinary");
-                }
-                else
-                {
-                    this.MessageProducer3.Publish(ImageReq);
-                    Log.Info("-------------------------------------------------Pushed Original to Queue");
-                }
-            }
-            catch (WebException ex)
-            {
-            }
-            return null;
-        }
 
         public string Post(UploadFileRequest request)
         {
@@ -367,19 +298,6 @@ namespace ExpressBase.MessageQueue.MQServices
         //    return ms;
         //}
 
-        private int MapFilesWithUser(EbConnectionFactory connectionFactory, int CustomerId, int FileRefId)
-        {
-            int res = 0;
-            string MapQuery = @"INSERT into customer_files (customer_id, eb_files_ref_id) values(@cust_id, @ref_id) returning id";
-            DbParameter[] MapParams =
-            {
-                        connectionFactory.DataDB.GetNewParameter("cust_id", EbDbTypes.Int32, CustomerId),
-                        connectionFactory.DataDB.GetNewParameter("ref_id", EbDbTypes.Int32, FileRefId)
-            };
-            var table = connectionFactory.DataDB.DoQuery(MapQuery, MapParams);
-            res = (int)table.Rows[0][0];
-            return res;
-        }
     }
 
     [Restrict(InternalOnly = true)]
@@ -387,31 +305,74 @@ namespace ExpressBase.MessageQueue.MQServices
     {
         public CloudinaryInternal(IMessageProducer _mqp, IMessageQueueClient _mqc) : base(_mqp, _mqc) { }
 
-        public string Post(CloudinaryUploadRequest request)
+        public string Post(GetImageFtpRequest request)
         {
+            EbConnectionFactory _ebConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
 
-            string url = (new EbConnectionFactory(request.SolnId, this.Redis)).ImageManipulate.Resize
-                (request.ImageBytes, request.ImageInfo, (int)(52428800 / request.ImageBytes.Length));
-
-            this.MessageProducer3.Publish(new CloudinaryUploadResponse()
+            UploadImageRequest ImageReq = new UploadImageRequest()
             {
-                Url = url,
-                ImageInfo = request.ImageInfo,
+                ImageInfo = new ImageMeta()
+                {
+                    FileCategory = EbFileCategory.Images,
+                    FileName = request.FileUrl.Value.Split('/').Last(),
+                    FileType = request.FileUrl.Value.Split('.').Last(),
+                    ImageQuality = ImageQuality.original,
+                    MetaDataDictionary = new Dictionary<string, List<string>>(),
+                },
                 UserId = request.UserId,
                 SolnId = request.SolnId,
                 BToken = request.BToken,
                 RToken = request.RToken
-            });
+            };
 
-            Log.Info("--------------------------------------Uploaded to Cloudinary");
+            try
+            {
+                ImageReq.Byte = _ebConnectionFactory.FTP.Download(request.FileUrl.Value);
 
+                Console.WriteLine("File Recieved : " + request.FileUrl.Value);
+
+                ImageReq.ImageInfo.Length = ImageReq.Byte.Length;
+                bool compress = (ImageReq.Byte.Length > 614400) ? true : false;
+
+                ImageReq.ImageInfo.FileRefId = UploadImageRequest.GetFileRefId(_ebConnectionFactory.DataDB);
+
+                if (MapFilesWithUser(_ebConnectionFactory, request.FileUrl.Key, ImageReq.ImageInfo.FileRefId) < 1)
+                    throw new Exception("File Mapping Failed");
+                if (compress)
+                {
+                    this.MessageProducer3.Publish(
+                        new CloudinaryUploadRequest()
+                        {
+                            ImageInfo = ImageReq.ImageInfo,
+                            ImageBytes = ImageReq.Byte,
+                            UserId = request.UserId,
+                            SolnId = request.SolnId,
+                            BToken = request.BToken,
+                            RToken = request.RToken
+                        });
+                    Log.Info("-------------------------------------------------Pushed to Queue to upload to Cloudinary");
+                }
+                else
+                {
+                    this.MessageProducer3.Publish(ImageReq);
+                    Log.Info("-------------------------------------------------Pushed Original to Queue");
+                }
+            }
+            catch (WebException ex)
+            {
+            }
             return null;
         }
 
-        public string Post(CloudinaryUploadResponse request)
+        public string Post(CloudinaryUploadRequest request)
         {
-            FlurlRequest CloudinaryRequest = new FlurlRequest(request.Url);
+            string url = (new EbConnectionFactory(request.SolnId, this.Redis)).ImageManipulate.Resize
+                (request.ImageBytes, request.ImageInfo, (int)(52428800 / request.ImageBytes.Length));
+
+            FlurlRequest CloudinaryRequest = new FlurlRequest(url);
+
             HttpResponseMessage CompressedImageResponse = GetCompressedImage(CloudinaryRequest).Result;
+
             byte[] CompressedImageBytes = CompressedImageResponse.Content.ReadAsByteArrayAsync().Result;
 
             this.MessageProducer3.Publish(new UploadImageRequest()
@@ -434,6 +395,7 @@ namespace ExpressBase.MessageQueue.MQServices
                 RToken = request.RToken,
 
             });
+            Log.Info("--------------------------------------Uploaded to Cloudinary");
 
             return null;
         }
@@ -441,6 +403,20 @@ namespace ExpressBase.MessageQueue.MQServices
         async Task<HttpResponseMessage> GetCompressedImage(FlurlRequest flurlRequest)
         {
             return await flurlRequest.SendAsync(System.Net.Http.HttpMethod.Get);
+        }
+
+        private int MapFilesWithUser(EbConnectionFactory connectionFactory, int CustomerId, int FileRefId)
+        {
+            int res = 0;
+            string MapQuery = @"INSERT into customer_files (customer_id, eb_files_ref_id) values(@cust_id, @ref_id) returning id";
+            DbParameter[] MapParams =
+            {
+                        connectionFactory.DataDB.GetNewParameter("cust_id", EbDbTypes.Int32, CustomerId),
+                        connectionFactory.DataDB.GetNewParameter("ref_id", EbDbTypes.Int32, FileRefId)
+            };
+            var table = connectionFactory.DataDB.DoQuery(MapQuery, MapParams);
+            res = (int)table.Rows[0][0];
+            return res;
         }
 
     }
