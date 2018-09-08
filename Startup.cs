@@ -3,7 +3,6 @@ using ExpressBase.Common.Constants;
 using ExpressBase.Common.EbServiceStack.ReqNRes;
 using ExpressBase.Common.ServiceClients;
 using ExpressBase.Common.ServiceStack.Auth;
-//using ExpressBase.MessageQueue.Services.Quartz;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using Funq;
 using Microsoft.AspNetCore.Builder;
@@ -11,16 +10,17 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-//using Quartz;
 using ServiceStack;
 using ServiceStack.Auth;
 using ServiceStack.Logging;
 using ServiceStack.Messaging;
-//using ServiceStack.Quartz;
 using ServiceStack.RabbitMq;
 using ServiceStack.Redis;
 using System;
 using System.IdentityModel.Tokens.Jwt;
+//using Quartz;
+//using ServiceStack.Quartz;
+//using ExpressBase.MessageQueue.Services.Quartz;
 
 namespace ExpressBase.MessageQueue
 {
@@ -121,9 +121,9 @@ namespace ExpressBase.MessageQueue
             mqServer.RegisterHandler<RefreshSolutionConnectionsRequest>(base.ExecuteMessage);
 
             mqServer.RegisterHandler<UploadFileRequest>(base.ExecuteMessage);
-            mqServer.RegisterHandler<UploadImageRequest>(base.ExecuteMessage, 3);
+            mqServer.RegisterHandler<UploadImageRequest>(base.ExecuteMessage, 4);
 
-            mqServer.RegisterHandler<GetImageFtpRequest>(base.ExecuteMessage, 3);
+            mqServer.RegisterHandler<GetImageFtpRequest>(base.ExecuteMessage, 4);
             mqServer.RegisterHandler<CloudinaryUploadRequest>(base.ExecuteMessage, 2);
 
             mqServer.RegisterHandler<ExportApplicationRequest>(base.ExecuteMessage);

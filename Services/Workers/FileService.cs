@@ -332,34 +332,60 @@ namespace ExpressBase.MessageQueue.MQServices
                 Console.WriteLine("File Recieved : " + request.FileUrl.Value);
 
                 ImageReq.ImageInfo.Length = ImageReq.Byte.Length;
-                bool compress = (ImageReq.Byte.Length > 614400) ? true : false;
+
+                object _imgenum = null;
+
+                bool isImage = (Enum.TryParse(typeof(ImageTypes), ImageReq.ImageInfo.FileType.ToString().ToLower(), out _imgenum));
+
+                bool compress = ((ImageReq.Byte.Length > 614400) ? true : false);
 
                 ImageReq.ImageInfo.FileRefId = UploadImageRequest.GetFileRefId(_ebConnectionFactory.DataDB);
 
                 if (MapFilesWithUser(_ebConnectionFactory, request.FileUrl.Key, ImageReq.ImageInfo.FileRefId) < 1)
                     throw new Exception("File Mapping Failed");
-                if (compress)
+                if (isImage)
                 {
-                    CloudinaryUploadRequest cloudinaryUpload = new CloudinaryUploadRequest()
+                    if (compress)
                     {
-                        ImageInfo = ImageReq.ImageInfo,
-                        ImageBytes = ImageReq.Byte,
+                        CloudinaryUploadRequest cloudinaryUpload = new CloudinaryUploadRequest()
+                        {
+                            ImageInfo = ImageReq.ImageInfo,
+                            ImageBytes = ImageReq.Byte,
+                            UserId = request.UserId,
+                            SolnId = request.SolnId,
+                            BToken = request.BToken,
+                            RToken = request.RToken
+                        };
+
+                        cloudinaryUpload.ImageInfo.ImgManipulationServiceId = _ebConnectionFactory.ImageManipulate.InfraConId;
+
+                        this.MessageProducer3.Publish(cloudinaryUpload);
+
+                        Log.Info("-------------------------------------------------Pushed to Queue to upload to Cloudinary");
+                    }
+                    else
+                    {
+                        this.MessageProducer3.Publish(ImageReq);
+                        Log.Info("-------------------------------------------------Pushed Original to Queue");
+                    }
+                }
+                else
+                {
+                    this.MessageProducer3.Publish(new UploadFileRequest()
+                    {
+                        FileDetails = new FileMeta()
+                        {
+                            FileName = ImageReq.ImageInfo.FileName,
+                            FileType = ImageReq.ImageInfo.FileType,
+                            FileCategory = EbFileCategory.File,
+                            FileRefId = ImageReq.ImageInfo.FileRefId,
+                            Length = ImageReq.ImageInfo.Length
+                        },
                         UserId = request.UserId,
                         SolnId = request.SolnId,
                         BToken = request.BToken,
                         RToken = request.RToken
-                    };
-
-                    cloudinaryUpload.ImageInfo.ImgManipulationServiceId = _ebConnectionFactory.ImageManipulate.InfraConId;
-
-                    this.MessageProducer3.Publish(cloudinaryUpload);
-
-                    Log.Info("-------------------------------------------------Pushed to Queue to upload to Cloudinary");
-                }
-                else
-                {
-                    this.MessageProducer3.Publish(ImageReq);
-                    Log.Info("-------------------------------------------------Pushed Original to Queue");
+                    });
                 }
             }
             catch (WebException ex)
@@ -397,8 +423,7 @@ namespace ExpressBase.MessageQueue.MQServices
                 UserId = request.UserId,
                 SolnId = request.SolnId,
                 BToken = request.BToken,
-                RToken = request.RToken,
-
+                RToken = request.RToken
             });
             Log.Info("--------------------------------------Uploaded to Cloudinary");
 
