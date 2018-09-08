@@ -391,7 +391,6 @@ namespace ExpressBase.MessageQueue.MQServices
             }
             catch (Exception e)
             {
-                Log.Info("Exception:" + e.ToString());
                 return new EbMqResponse();
             }
             return new EbMqResponse { Result = true };
