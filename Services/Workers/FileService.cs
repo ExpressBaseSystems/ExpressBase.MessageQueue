@@ -381,6 +381,7 @@ namespace ExpressBase.MessageQueue.MQServices
                             FileRefId = ImageReq.ImageInfo.FileRefId,
                             Length = ImageReq.ImageInfo.Length
                         },
+                        Byte = ImageReq.Byte,
                         UserId = request.UserId,
                         SolnId = request.SolnId,
                         BToken = request.BToken,
