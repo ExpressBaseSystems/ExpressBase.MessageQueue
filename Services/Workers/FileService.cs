@@ -25,7 +25,7 @@ namespace ExpressBase.MessageQueue.MQServices
     {
         public FileServiceInternal(IMessageProducer _mqp, IMessageQueueClient _mqc, IEbServerEventClient _sec) : base(_mqp, _mqc, _sec) { }
 
-        public string Post(UploadFileRequest request)
+        public EbMqResponse Post(UploadFileRequest request)
         {
             Log.Info("Inside Upload Img MQ Service");
 
@@ -71,12 +71,12 @@ namespace ExpressBase.MessageQueue.MQServices
             catch (Exception e)
             {
                 Log.Info("Exception:" + e.ToString());
-                return "Fail";
+                return new EbMqResponse();
             }
-            return "Success";
+            return new EbMqResponse { Result = true };
         }
 
-        public string Post(UploadImageRequest request)
+        public EbMqResponse Post(UploadImageRequest request)
         {
             try
             {
@@ -121,10 +121,10 @@ namespace ExpressBase.MessageQueue.MQServices
             }
             catch (Exception e)
             {
-                Log.Info("Exception:" + e.ToString() + "\n \nStackTrace: " + e.StackTrace);
-                return "Fail";
+                Log.Info("Exception:" + e.ToString());
+                return new EbMqResponse();
             }
-            return "Success";
+            return new EbMqResponse { Result = true };
         }
 
         private bool Persist(FileMetaPersistRequest request, IDatabase dataDb)
@@ -305,7 +305,7 @@ namespace ExpressBase.MessageQueue.MQServices
     {
         public CloudinaryInternal(IMessageProducer _mqp, IMessageQueueClient _mqc) : base(_mqp, _mqc) { }
 
-        public string Post(GetImageFtpRequest request)
+        public EbMqResponse Post(GetImageFtpRequest request)
         {
             EbConnectionFactory _ebConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
 
@@ -392,12 +392,12 @@ namespace ExpressBase.MessageQueue.MQServices
             catch (Exception e)
             {
                 Log.Info("Exception:" + e.ToString());
-                return "Fail";
+                return new EbMqResponse();
             }
-            return "Success";
+            return new EbMqResponse { Result = true };
         }
 
-        public string Post(CloudinaryUploadRequest request)
+        public EbMqResponse Post(CloudinaryUploadRequest request)
         {
             try
             {
@@ -434,9 +434,9 @@ namespace ExpressBase.MessageQueue.MQServices
             catch (Exception e)
             {
                 Log.Info("Exception:" + e.ToString());
-                return "Fail";
+                return new EbMqResponse();
             }
-            return "Success";
+            return new EbMqResponse { Result = true };
         }
 
         async Task<HttpResponseMessage> GetCompressedImage(FlurlRequest flurlRequest)
