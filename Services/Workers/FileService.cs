@@ -71,9 +71,9 @@ namespace ExpressBase.MessageQueue.MQServices
             catch (Exception e)
             {
                 Log.Info("Exception:" + e.ToString());
-                return null;
+                return "Fail";
             }
-            return null;
+            return "Success";
         }
 
         public string Post(UploadImageRequest request)
@@ -122,9 +122,9 @@ namespace ExpressBase.MessageQueue.MQServices
             catch (Exception e)
             {
                 Log.Info("Exception:" + e.ToString() + "\n \nStackTrace: " + e.StackTrace);
-                return null;
+                return "Fail";
             }
-            return null;
+            return "Success";
         }
 
         private bool Persist(FileMetaPersistRequest request, IDatabase dataDb)
@@ -389,46 +389,54 @@ namespace ExpressBase.MessageQueue.MQServices
                     });
                 }
             }
-            catch (WebException ex)
+            catch (Exception e)
             {
+                Log.Info("Exception:" + e.ToString());
+                return "Fail";
             }
-            return null;
+            return "Success";
         }
 
         public string Post(CloudinaryUploadRequest request)
         {
-            EbConnectionFactory _ebConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
-            string url = _ebConnectionFactory.ImageManipulate.Resize
-                (request.ImageBytes, request.ImageInfo, (int)(52428800 / request.ImageBytes.Length));
-
-            FlurlRequest CloudinaryRequest = new FlurlRequest(url);
-
-            HttpResponseMessage CompressedImageResponse = GetCompressedImage(CloudinaryRequest).Result;
-
-            byte[] CompressedImageBytes = CompressedImageResponse.Content.ReadAsByteArrayAsync().Result;
-
-            this.MessageProducer3.Publish(new UploadImageRequest()
+            try
             {
-                ImageInfo = new ImageMeta()
-                {
-                    FileName = request.ImageInfo.FileName,
-                    FileCategory = request.ImageInfo.FileCategory,
-                    FileType = request.ImageInfo.FileType,
-                    Length = CompressedImageBytes.Length,
-                    MetaDataDictionary = (request.ImageInfo.MetaDataDictionary != null) ? request.ImageInfo.MetaDataDictionary : new Dictionary<String, List<string>>() { },
-                    FileRefId = request.ImageInfo.FileRefId,
-                    ImageQuality = ImageQuality.original,
-                    ImgManipulationServiceId = request.ImageInfo.ImgManipulationServiceId
-                },
-                Byte = CompressedImageBytes,
-                UserId = request.UserId,
-                SolnId = request.SolnId,
-                BToken = request.BToken,
-                RToken = request.RToken
-            });
-            Log.Info("--------------------------------------Uploaded to Cloudinary");
+                EbConnectionFactory _ebConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
+                string url = _ebConnectionFactory.ImageManipulate.Resize
+                    (request.ImageBytes, request.ImageInfo, (int)(52428800 / request.ImageBytes.Length));
 
-            return null;
+                FlurlRequest CloudinaryRequest = new FlurlRequest(url);
+
+                HttpResponseMessage CompressedImageResponse = GetCompressedImage(CloudinaryRequest).Result;
+
+                byte[] CompressedImageBytes = CompressedImageResponse.Content.ReadAsByteArrayAsync().Result;
+
+                this.MessageProducer3.Publish(new UploadImageRequest()
+                {
+                    ImageInfo = new ImageMeta()
+                    {
+                        FileName = request.ImageInfo.FileName,
+                        FileCategory = request.ImageInfo.FileCategory,
+                        FileType = request.ImageInfo.FileType,
+                        Length = CompressedImageBytes.Length,
+                        MetaDataDictionary = (request.ImageInfo.MetaDataDictionary != null) ? request.ImageInfo.MetaDataDictionary : new Dictionary<String, List<string>>() { },
+                        FileRefId = request.ImageInfo.FileRefId,
+                        ImageQuality = ImageQuality.original,
+                        ImgManipulationServiceId = request.ImageInfo.ImgManipulationServiceId
+                    },
+                    Byte = CompressedImageBytes,
+                    UserId = request.UserId,
+                    SolnId = request.SolnId,
+                    BToken = request.BToken,
+                    RToken = request.RToken
+                });
+            }
+            catch (Exception e)
+            {
+                Log.Info("Exception:" + e.ToString());
+                return "Fail";
+            }
+            return "Success";
         }
 
         async Task<HttpResponseMessage> GetCompressedImage(FlurlRequest flurlRequest)
