@@ -43,7 +43,6 @@ namespace ExpressBase.MessageQueue.MQServices
                     FileType = request.FileUrl.Value.Split('.').Last(),
                     ImageQuality = ImageQuality.original,
                     MetaDataDictionary = new Dictionary<string, List<string>>(),
-                    FileRefId = UploadImageRequest.GetFileRefId(_ebConnectionFactory.DataDB),
                 },
                 UserId = request.UserId,
                 SolnId = request.SolnId,
@@ -60,7 +59,9 @@ namespace ExpressBase.MessageQueue.MQServices
                 ImageReq.ImageInfo.Length = ImageReq.Byte.Length;
                 bool compress = (ImageReq.Byte.Length > 1048576) ? true : false;
 
-                if (MapFilesWithUser(_ebConnectionFactory, request.FileUrl.Key, request.FileUrl.Key) < 1)
+                ImageReq.ImageInfo.FileRefId = UploadImageRequest.GetFileRefId(_ebConnectionFactory.DataDB);
+
+                if (MapFilesWithUser(_ebConnectionFactory, request.FileUrl.Key, ImageReq.ImageInfo.FileRefId) < 1)
                     throw new Exception("File Mapping Failed");
                 if (compress)
                 {
@@ -69,8 +70,9 @@ namespace ExpressBase.MessageQueue.MQServices
                         {
                             ImageInfo = new ImageMeta()
                             {
-                                FileRefId = request.FileUrl.Key,
-                                FileName = request.FileUrl.Value.Split('/').Last()
+                                FileRefId = ImageReq.ImageInfo.FileRefId,
+                                FileName = request.FileUrl.Value.Split('/').Last(),
+                                ImgManipulationServiceId = _ebConnectionFactory.ImageManipulate.InfraConId
                             },
                             ImageBytes = ImageReq.Byte,
                             UserId = request.UserId,
@@ -174,7 +176,8 @@ namespace ExpressBase.MessageQueue.MQServices
                         Length = request.Byte.Length,
                         FileType = request.ImageInfo.FileType,
                         FileCategory = request.ImageInfo.FileCategory,
-                        FileRefId = request.ImageInfo.FileRefId
+                        FileRefId = request.ImageInfo.FileRefId,
+                        ImgManipulationServiceId = request.ImageInfo.ImgManipulationServiceId
                     },
                     SolnId = request.SolnId,
                     UserId = request.UserId
@@ -202,7 +205,7 @@ namespace ExpressBase.MessageQueue.MQServices
 
             EbConnectionFactory connectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
 
-            string sql = "UPDATE eb_files_ref SET (filename, userid, filestore_id, length, filetype, tags, filecategory, uploadts) = (@filename, @userid, @filestoreid, @length, @filetype, @tags, @filecategory, CURRENT_TIMESTAMP) WHERE id = @refid RETURNING id";
+            string sql = "UPDATE eb_files_ref SET (filename, userid, filestore_id, length, filetype, tags, filecategory, uploadts, img_manp_ser_id) = (@filename, @userid, @filestoreid, @length, @filetype, @tags, @filecategory, CURRENT_TIMESTAMP, @imgmanpserid) WHERE id = @refid RETURNING id";
             DbParameter[] parameters =
             {
                         connectionFactory.DataDB.GetNewParameter("userid", EbDbTypes.Int32, request.UserId),
@@ -212,7 +215,8 @@ namespace ExpressBase.MessageQueue.MQServices
                         connectionFactory.DataDB.GetNewParameter("length",EbDbTypes.Int64, request.FileDetails.Length),
                         connectionFactory.DataDB.GetNewParameter("filetype",EbDbTypes.String, (String.IsNullOrEmpty(request.FileDetails.FileType))? StaticFileConstants.PNG : request.FileDetails.FileType),
                         connectionFactory.DataDB.GetNewParameter("tags",EbDbTypes.String, tag),
-                        connectionFactory.DataDB.GetNewParameter("filecategory",EbDbTypes.Int16, request.FileDetails.FileCategory)
+                        connectionFactory.DataDB.GetNewParameter("filecategory",EbDbTypes.Int16, request.FileDetails.FileCategory),
+                        connectionFactory.DataDB.GetNewParameter("imgmanpserid", EbDbTypes.Int32, request.FileDetails.ImgManipulationServiceId)
             };
             var iCount = connectionFactory.DataDB.DoQuery(sql, parameters);
 
@@ -420,7 +424,8 @@ namespace ExpressBase.MessageQueue.MQServices
                     Length = CompressedImageBytes.Length,
                     MetaDataDictionary = (request.ImageInfo.MetaDataDictionary != null) ? request.ImageInfo.MetaDataDictionary : new Dictionary<String, List<string>>() { },
                     FileRefId = request.ImageInfo.FileRefId,
-                    ImageQuality = ImageQuality.large
+                    ImageQuality = ImageQuality.large,
+                    ImgManipulationServiceId = request.ImageInfo.ImgManipulationServiceId
                 },
                 Byte = CompressedImageBytes,
                 UserId = request.UserId,
