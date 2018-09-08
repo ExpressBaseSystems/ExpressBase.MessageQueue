@@ -31,7 +31,9 @@ namespace ExpressBase.MessageQueue.MQServices
 
             try
             {
-                request.FileDetails.FileStoreId = (new EbConnectionFactory(request.SolnId, this.Redis)).FilesDB.UploadFile(
+                EbConnectionFactory _ebConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
+
+                request.FileDetails.FileStoreId = _ebConnectionFactory.FilesDB.UploadFile(
                     request.FileDetails.FileName,
                     (request.FileDetails.MetaDataDictionary != null) ? request.FileDetails.MetaDataDictionary : new Dictionary<String, List<string>>() { },
                     request.Byte,
@@ -48,7 +50,7 @@ namespace ExpressBase.MessageQueue.MQServices
                     ToUserAuthId = request.UserAuthId,
                 });
 
-                this.MessageProducer3.Publish(new FileMetaPersistRequest
+                bool IsPersisted = Persist(new FileMetaPersistRequest
                 {
                     FileDetails = new FileMeta
                     {
@@ -61,10 +63,8 @@ namespace ExpressBase.MessageQueue.MQServices
                         FileRefId = request.FileDetails.FileRefId
                     },
                     SolnId = request.SolnId,
-                    UserId = request.UserId,
-                    BToken = request.BToken,
-                    RToken = request.RToken
-                });
+                    UserId = request.UserId
+                }, _ebConnectionFactory.DataDB);
 
 
             }
@@ -80,7 +80,9 @@ namespace ExpressBase.MessageQueue.MQServices
         {
             try
             {
-                request.ImageInfo.FileStoreId = (new EbConnectionFactory(request.SolnId, this.Redis)).FilesDB.UploadFile(
+                EbConnectionFactory _ebConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
+
+                request.ImageInfo.FileStoreId = _ebConnectionFactory.FilesDB.UploadFile(
                     ((request.ImageInfo.FileName != null) ? request.ImageInfo.FileName : String.Empty),
                     (request.ImageInfo.MetaDataDictionary != null) ? request.ImageInfo.MetaDataDictionary : new Dictionary<String, List<string>>() { },
                     request.Byte,
@@ -112,7 +114,7 @@ namespace ExpressBase.MessageQueue.MQServices
                     },
                     SolnId = request.SolnId,
                     UserId = request.UserId
-                });
+                }, _ebConnectionFactory.DataDB);
 
                 if (request.ImageInfo.ImageQuality == ImageQuality.large)
                     Log.Info("--------------------------------------------Image from Cloudinary Uploaded");
@@ -125,7 +127,7 @@ namespace ExpressBase.MessageQueue.MQServices
             return null;
         }
 
-        private bool Persist(FileMetaPersistRequest request)
+        private bool Persist(FileMetaPersistRequest request, IDatabase dataDb)
         {
             string tag = string.Empty;
             if (request.FileDetails.MetaDataDictionary != null)
@@ -134,22 +136,20 @@ namespace ExpressBase.MessageQueue.MQServices
                     tag = string.Join(CharConstants.COMMA, items.Value);
                 }
 
-            EbConnectionFactory connectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
-
             string sql = "UPDATE eb_files_ref SET (filename, userid, filestore_id, length, filetype, tags, filecategory, uploadts, img_manp_ser_id) = (@filename, @userid, @filestoreid, @length, @filetype, @tags, @filecategory, CURRENT_TIMESTAMP, @imgmanpserid) WHERE id = @refid RETURNING id";
             DbParameter[] parameters =
             {
-                        connectionFactory.DataDB.GetNewParameter("userid", EbDbTypes.Int32, request.UserId),
-                        connectionFactory.DataDB.GetNewParameter("filestoreid",EbDbTypes.String, request.FileDetails.FileStoreId),
-                        connectionFactory.DataDB.GetNewParameter("refid",EbDbTypes.Int32, request.FileDetails.FileRefId),
-                        connectionFactory.DataDB.GetNewParameter("filename",EbDbTypes.String, ((request.FileDetails.FileName != null) ? request.FileDetails.FileName : String.Empty)),
-                        connectionFactory.DataDB.GetNewParameter("length",EbDbTypes.Int64, request.FileDetails.Length),
-                        connectionFactory.DataDB.GetNewParameter("filetype",EbDbTypes.String, (String.IsNullOrEmpty(request.FileDetails.FileType))? StaticFileConstants.PNG : request.FileDetails.FileType),
-                        connectionFactory.DataDB.GetNewParameter("tags",EbDbTypes.String, tag),
-                        connectionFactory.DataDB.GetNewParameter("filecategory",EbDbTypes.Int16, request.FileDetails.FileCategory),
-                        connectionFactory.DataDB.GetNewParameter("imgmanpserid", EbDbTypes.Int32, request.FileDetails.ImgManipulationServiceId)
+                        dataDb.GetNewParameter("userid", EbDbTypes.Int32, request.UserId),
+                        dataDb.GetNewParameter("filestoreid",EbDbTypes.String, request.FileDetails.FileStoreId),
+                        dataDb.GetNewParameter("refid",EbDbTypes.Int32, request.FileDetails.FileRefId),
+                        dataDb.GetNewParameter("filename",EbDbTypes.String, ((request.FileDetails.FileName != null) ? request.FileDetails.FileName : String.Empty)),
+                        dataDb.GetNewParameter("length",EbDbTypes.Int64, request.FileDetails.Length),
+                        dataDb.GetNewParameter("filetype",EbDbTypes.String, (String.IsNullOrEmpty(request.FileDetails.FileType))? StaticFileConstants.PNG : request.FileDetails.FileType),
+                        dataDb.GetNewParameter("tags",EbDbTypes.String, tag),
+                        dataDb.GetNewParameter("filecategory",EbDbTypes.Int16, request.FileDetails.FileCategory),
+                        dataDb.GetNewParameter("imgmanpserid", EbDbTypes.Int32, request.FileDetails.ImgManipulationServiceId)
             };
-            var iCount = connectionFactory.DataDB.DoQuery(sql, parameters);
+            var iCount = dataDb.DoQuery(sql, parameters);
 
             return (iCount.Rows.Count > 0);
         }
