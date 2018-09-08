@@ -39,7 +39,7 @@ namespace ExpressBase.MessageQueue.MQServices
                 ImageInfo = new ImageMeta()
                 {
                     FileCategory = EbFileCategory.Images,
-                    FileName = request.FileUrl.Value,
+                    FileName = request.FileUrl.Value.Split('/').Last(),
                     FileType = request.FileUrl.Value.Split('.').Last(),
                     ImageQuality = ImageQuality.original,
                     MetaDataDictionary = new Dictionary<string, List<string>>(),
@@ -67,7 +67,11 @@ namespace ExpressBase.MessageQueue.MQServices
                     this.MessageProducer3.Publish(
                         new CloudinaryUploadRequest()
                         {
-                            ImageInfo = new ImageMeta() { FileRefId = request.FileUrl.Key },
+                            ImageInfo = new ImageMeta()
+                            {
+                                FileRefId = request.FileUrl.Key,
+                                FileName = request.FileUrl.Value.Split('/').Last()
+                            },
                             ImageBytes = ImageReq.Byte,
                             UserId = request.UserId,
                             SolnId = request.SolnId,
@@ -403,7 +407,7 @@ namespace ExpressBase.MessageQueue.MQServices
         public string Post(CloudinaryUploadResponse request)
         {
             FlurlRequest CloudinaryRequest = new FlurlRequest(request.Url);
-            HttpResponseMessage CompressedImageResponse = Send(CloudinaryRequest).Result;
+            HttpResponseMessage CompressedImageResponse = GetCompressedImage(CloudinaryRequest).Result;
             byte[] CompressedImageBytes = CompressedImageResponse.Content.ReadAsByteArrayAsync().Result;
 
             this.MessageProducer3.Publish(new UploadImageRequest()
@@ -429,7 +433,7 @@ namespace ExpressBase.MessageQueue.MQServices
             return null;
         }
 
-        async Task<HttpResponseMessage> Send(Flurl.Http.FlurlRequest flurlRequest)
+        async Task<HttpResponseMessage> GetCompressedImage(FlurlRequest flurlRequest)
         {
             return await flurlRequest.SendAsync(System.Net.Http.HttpMethod.Get);
         }
