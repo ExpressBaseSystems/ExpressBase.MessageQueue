@@ -329,12 +329,12 @@ namespace ExpressBase.MessageQueue.MQServices
             {
                 ImageReq.Byte = _ebConnectionFactory.FTP.Download(request.FileUrl.Value);
 
-                if (!(ImageReq.Byte.Length > 0))
+                ImageReq.ImageInfo.Length = ImageReq.Byte.Length;
+
+                if (!(ImageReq.ImageInfo.Length > 0))
                     throw new Exception("Exception: File Empty");
 
-                Console.WriteLine("File Recieved : " + request.FileUrl.Value);
-
-                ImageReq.ImageInfo.Length = ImageReq.Byte.Length;
+                Console.WriteLine(String.Format(@"File Recieved :{0}({1}) ", ImageReq.ImageInfo.FileName, ImageReq.ImageInfo.Length));
 
                 object _imgenum = null;
 
@@ -394,7 +394,7 @@ namespace ExpressBase.MessageQueue.MQServices
             }
             catch (Exception e)
             {
-                Console.WriteLine("Exception: "+ e.Message);
+                Console.WriteLine("Exception: " + e.Message);
                 return new EbMqResponse();
             }
             return new EbMqResponse { Result = true };
@@ -408,11 +408,24 @@ namespace ExpressBase.MessageQueue.MQServices
                 string url = _ebConnectionFactory.ImageManipulate.Resize
                     (request.ImageBytes, request.ImageInfo, (int)(52428800 / request.ImageBytes.Length));
 
-                FlurlRequest CloudinaryRequest = new FlurlRequest(url);
+                byte[] CompressedImageBytes;
 
-                HttpResponseMessage CompressedImageResponse = GetCompressedImage(CloudinaryRequest).Result;
+                using (var client = new HttpClient())
+                {
+                    var response = client.GetAsync(url).Result;
 
-                byte[] CompressedImageBytes = CompressedImageResponse.Content.ReadAsByteArrayAsync().Result;
+                    if (response.IsSuccessStatusCode)
+                    {
+                        var responseContent = response.Content;
+
+                        // by calling .Result you are synchronously reading the result
+                        CompressedImageBytes = responseContent.ReadAsByteArrayAsync().Result;
+                    }
+                    else
+                    {
+                        throw new Exception();
+                    }
+                }
 
                 this.MessageProducer3.Publish(new UploadImageRequest()
                 {
@@ -433,6 +446,8 @@ namespace ExpressBase.MessageQueue.MQServices
                     BToken = request.BToken,
                     RToken = request.RToken
                 });
+                Log.Info("-------------------------------------------------Pushed to Queue after Cloudinary");
+
             }
             catch (Exception e)
             {
@@ -440,11 +455,6 @@ namespace ExpressBase.MessageQueue.MQServices
                 return new EbMqResponse();
             }
             return new EbMqResponse { Result = true };
-        }
-
-        async Task<HttpResponseMessage> GetCompressedImage(FlurlRequest flurlRequest)
-        {
-            return await flurlRequest.SendAsync(System.Net.Http.HttpMethod.Get);
         }
 
         private int MapFilesWithUser(EbConnectionFactory connectionFactory, int CustomerId, int FileRefId)
