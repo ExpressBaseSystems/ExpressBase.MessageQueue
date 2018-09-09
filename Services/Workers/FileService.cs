@@ -329,6 +329,9 @@ namespace ExpressBase.MessageQueue.MQServices
             {
                 ImageReq.Byte = _ebConnectionFactory.FTP.Download(request.FileUrl.Value);
 
+                if (!(ImageReq.Byte.Length > 0))
+                    throw new Exception("Exception: File Empty");
+
                 Console.WriteLine("File Recieved : " + request.FileUrl.Value);
 
                 ImageReq.ImageInfo.Length = ImageReq.Byte.Length;
