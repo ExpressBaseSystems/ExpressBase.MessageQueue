@@ -70,7 +70,7 @@ namespace ExpressBase.MessageQueue.MQServices
             }
             catch (Exception e)
             {
-                Log.Info("Exception:" + e.ToString());
+                Log.Error("UploadFile:" + e.ToString());
                 return new EbMqResponse();
             }
             return new EbMqResponse { Result = true };
@@ -121,7 +121,7 @@ namespace ExpressBase.MessageQueue.MQServices
             }
             catch (Exception e)
             {
-                Log.Info("Exception:" + e.ToString());
+                Log.Error("UploadImage:" + e.ToString());
                 return new EbMqResponse();
             }
             return new EbMqResponse { Result = true };
@@ -309,92 +309,93 @@ namespace ExpressBase.MessageQueue.MQServices
         {
             EbConnectionFactory _ebConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
 
-            UploadImageRequest ImageReq = new UploadImageRequest()
-            {
-                ImageInfo = new ImageMeta()
-                {
-                    FileCategory = EbFileCategory.Images,
-                    FileName = request.FileUrl.Value.Split('/').Last(),
-                    FileType = request.FileUrl.Value.Split('.').Last(),
-                    ImageQuality = ImageQuality.original,
-                    MetaDataDictionary = new Dictionary<string, List<string>>(),
-                },
-                UserId = request.UserId,
-                SolnId = request.SolnId,
-                BToken = request.BToken,
-                RToken = request.RToken
-            };
 
             try
             {
-                ImageReq.Byte = _ebConnectionFactory.FTP.Download(request.FileUrl.Value);
+                byte[] _byte = _ebConnectionFactory.FTP.Download(request.FileUrl.Value);
 
-                ImageReq.ImageInfo.Length = ImageReq.Byte.Length;
-
-                if (!(ImageReq.ImageInfo.Length > 0))
-                    throw new Exception("Exception: File Empty");
-
-                Console.WriteLine(String.Format(@"File Recieved :{0}({1}) ", ImageReq.ImageInfo.FileName, ImageReq.ImageInfo.Length));
-
-                object _imgenum = null;
-
-                bool isImage = (Enum.TryParse(typeof(ImageTypes), ImageReq.ImageInfo.FileType.ToString().ToLower(), out _imgenum));
-
-                bool compress = ((ImageReq.Byte.Length > 614400) ? true : false);
-
-                ImageReq.ImageInfo.FileRefId = UploadImageRequest.GetFileRefId(_ebConnectionFactory.DataDB);
-
-                if (MapFilesWithUser(_ebConnectionFactory, request.FileUrl.Key, ImageReq.ImageInfo.FileRefId) < 1)
-                    throw new Exception("File Mapping Failed");
-                if (isImage)
+                if (_byte.Length > 0)
                 {
-                    if (compress)
+                    UploadImageRequest ImageReq = new UploadImageRequest()
                     {
-                        CloudinaryUploadRequest cloudinaryUpload = new CloudinaryUploadRequest()
+                        ImageInfo = new ImageMeta()
                         {
-                            ImageInfo = ImageReq.ImageInfo,
-                            ImageBytes = ImageReq.Byte,
-                            UserId = request.UserId,
-                            SolnId = request.SolnId,
-                            BToken = request.BToken,
-                            RToken = request.RToken
-                        };
-
-                        cloudinaryUpload.ImageInfo.ImgManipulationServiceId = _ebConnectionFactory.ImageManipulate.InfraConId;
-
-                        this.MessageProducer3.Publish(cloudinaryUpload);
-
-                        Log.Info("-------------------------------------------------Pushed to Queue to upload to Cloudinary");
-                    }
-                    else
-                    {
-                        this.MessageProducer3.Publish(ImageReq);
-                        Log.Info("-------------------------------------------------Pushed Original to Queue");
-                    }
-                }
-                else
-                {
-                    this.MessageProducer3.Publish(new UploadFileRequest()
-                    {
-                        FileDetails = new FileMeta()
-                        {
-                            FileName = ImageReq.ImageInfo.FileName,
-                            FileType = ImageReq.ImageInfo.FileType,
-                            FileCategory = EbFileCategory.File,
-                            FileRefId = ImageReq.ImageInfo.FileRefId,
-                            Length = ImageReq.ImageInfo.Length
+                            FileRefId = UploadImageRequest.GetFileRefId(_ebConnectionFactory.DataDB),
+                            FileCategory = EbFileCategory.Images,
+                            FileName = request.FileUrl.Value.Split('/').Last(),
+                            FileType = request.FileUrl.Value.Split('.').Last(),
+                            ImageQuality = ImageQuality.original,
+                            Length = _byte.Length,
+                            MetaDataDictionary = new Dictionary<string, List<string>>(),
                         },
-                        Byte = ImageReq.Byte,
+                        Byte = _byte,
                         UserId = request.UserId,
                         SolnId = request.SolnId,
                         BToken = request.BToken,
                         RToken = request.RToken
-                    });
+                    };
+
+
+                    Console.WriteLine(String.Format(@"File Recieved :{0}({1}) ", ImageReq.ImageInfo.FileName, ImageReq.ImageInfo.Length));
+
+                    object _imgenum = null;
+
+                    bool isImage = (Enum.TryParse(typeof(ImageTypes), ImageReq.ImageInfo.FileType.ToString().ToLower(), out _imgenum));
+
+                    bool compress = ((ImageReq.ImageInfo.Length > 614400) ? true : false);
+
+                    if (MapFilesWithUser(_ebConnectionFactory, request.FileUrl.Key, ImageReq.ImageInfo.FileRefId) < 1)
+                        throw new Exception("File Mapping Failed");
+                    if (isImage)
+                    {
+                        if (compress)
+                        {
+                            CloudinaryUploadRequest cloudinaryUpload = new CloudinaryUploadRequest()
+                            {
+                                ImageInfo = ImageReq.ImageInfo,
+                                ImageBytes = ImageReq.Byte,
+                                UserId = request.UserId,
+                                SolnId = request.SolnId,
+                                BToken = request.BToken,
+                                RToken = request.RToken
+                            };
+
+                            cloudinaryUpload.ImageInfo.ImgManipulationServiceId = _ebConnectionFactory.ImageManipulate.InfraConId;
+
+                            this.MessageProducer3.Publish(cloudinaryUpload);
+
+                            Log.Info("-------------------------------------------------Pushed to Queue to upload to Cloudinary");
+                        }
+                        else
+                        {
+                            this.MessageProducer3.Publish(ImageReq);
+                            Log.Info("-------------------------------------------------Pushed Original to Queue");
+                        }
+                    }
+                    else
+                    {
+                        this.MessageProducer3.Publish(new UploadFileRequest()
+                        {
+                            FileDetails = new FileMeta()
+                            {
+                                FileName = ImageReq.ImageInfo.FileName,
+                                FileType = ImageReq.ImageInfo.FileType,
+                                FileCategory = EbFileCategory.File,
+                                FileRefId = ImageReq.ImageInfo.FileRefId,
+                                Length = ImageReq.ImageInfo.Length
+                            },
+                            Byte = ImageReq.Byte,
+                            UserId = request.UserId,
+                            SolnId = request.SolnId,
+                            BToken = request.BToken,
+                            RToken = request.RToken
+                        });
+                    }
                 }
             }
             catch (Exception e)
             {
-                Console.WriteLine("Exception: " + e.Message);
+                Log.Error("MQ Exception: " + e.Message);
                 return new EbMqResponse();
             }
             return new EbMqResponse { Result = true };
@@ -406,7 +407,7 @@ namespace ExpressBase.MessageQueue.MQServices
             {
                 EbConnectionFactory _ebConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
                 string url = _ebConnectionFactory.ImageManipulate.Resize
-                    (request.ImageBytes, request.ImageInfo, (int)(52428800 / request.ImageBytes.Length));
+                    (request.ImageBytes, request.ImageInfo, (int)(52428800 / request.ImageInfo.Length));
 
                 byte[] CompressedImageBytes;
 
@@ -451,7 +452,7 @@ namespace ExpressBase.MessageQueue.MQServices
             }
             catch (Exception e)
             {
-                Log.Info("Exception:" + e.ToString());
+                Log.Error("ImageFTP:" + e.ToString());
                 return new EbMqResponse();
             }
             return new EbMqResponse { Result = true };
