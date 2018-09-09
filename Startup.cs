@@ -123,8 +123,8 @@ namespace ExpressBase.MessageQueue
             mqServer.RegisterHandler<UploadFileRequest>(base.ExecuteMessage);
             mqServer.RegisterHandler<UploadImageRequest>(base.ExecuteMessage, 3);
 
-            mqServer.RegisterHandler<GetImageFtpRequest>(base.ExecuteMessage, 3);
-            mqServer.RegisterHandler<CloudinaryUploadRequest>(base.ExecuteMessage, 3);
+            mqServer.RegisterHandler<GetImageFtpRequest>(base.ExecuteMessage, 4);
+            mqServer.RegisterHandler<CloudinaryUploadRequest>(base.ExecuteMessage, 6);
 
             mqServer.RegisterHandler<ExportApplicationRequest>(base.ExecuteMessage);
             mqServer.RegisterHandler<ImportApplicationRequest>(base.ExecuteMessage);
