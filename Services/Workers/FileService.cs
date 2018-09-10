@@ -309,24 +309,28 @@ namespace ExpressBase.MessageQueue.MQServices
         {
             EbConnectionFactory _ebConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
 
-
             try
             {
                 byte[] _byte = _ebConnectionFactory.FTP.Download(request.FileUrl.Value);
 
                 if (_byte.Length > 0)
                 {
+                    UpdateCounter(_ebConnectionFactory.DataDB, CustomerId: request.FileUrl.Key, IsFtp: 1);
+                    List<string> CId = new List<string>();
+                    CId.Add(request.FileUrl.Key.ToString());
+                    Dictionary<string, List<string>> dict = new Dictionary<string, List<string>>();
+                    dict.Add("CustomerId", CId);
+
                     UploadImageRequest ImageReq = new UploadImageRequest()
                     {
                         ImageInfo = new ImageMeta()
                         {
-                            FileRefId = UploadImageRequest.GetFileRefId(_ebConnectionFactory.DataDB),
                             FileCategory = EbFileCategory.Images,
                             FileName = request.FileUrl.Value.Split('/').Last(),
                             FileType = request.FileUrl.Value.Split('.').Last(),
                             ImageQuality = ImageQuality.original,
                             Length = _byte.Length,
-                            MetaDataDictionary = new Dictionary<string, List<string>>(),
+                            MetaDataDictionary = dict,
                         },
                         Byte = _byte,
                         UserId = request.UserId,
@@ -335,6 +339,7 @@ namespace ExpressBase.MessageQueue.MQServices
                         RToken = request.RToken
                     };
 
+                    ImageReq.ImageInfo.FileRefId = UploadImageRequest.GetFileRefId(_ebConnectionFactory.DataDB, request.UserId, ImageReq.ImageInfo.FileName, ImageReq.ImageInfo.FileType, String.Empty, ImageReq.ImageInfo.FileCategory);
 
                     Console.WriteLine(String.Format(@"File Recieved :{0}({1}) ", ImageReq.ImageInfo.FileName, ImageReq.ImageInfo.Length));
 
@@ -409,6 +414,11 @@ namespace ExpressBase.MessageQueue.MQServices
                 string url = _ebConnectionFactory.ImageManipulate.Resize
                     (request.ImageBytes, request.ImageInfo, (int)(52428800 / request.ImageInfo.Length));
 
+                List<string> cust_id = new List<string>();
+                request.ImageInfo.MetaDataDictionary.TryGetValue("CustomerId", out cust_id);
+
+                UpdateCounter(_ebConnectionFactory.DataDB, cust_id[0].ToInt(), IsCloudUp: 1);
+
                 byte[] CompressedImageBytes;
 
                 using (var client = new HttpClient())
@@ -427,28 +437,32 @@ namespace ExpressBase.MessageQueue.MQServices
                         throw new Exception();
                     }
                 }
-
-                this.MessageProducer3.Publish(new UploadImageRequest()
+                if (CompressedImageBytes.Length > 0)
                 {
-                    ImageInfo = new ImageMeta()
+                    this.MessageProducer3.Publish(new UploadImageRequest()
                     {
-                        FileName = request.ImageInfo.FileName,
-                        FileCategory = request.ImageInfo.FileCategory,
-                        FileType = request.ImageInfo.FileType,
-                        Length = CompressedImageBytes.Length,
-                        MetaDataDictionary = (request.ImageInfo.MetaDataDictionary != null) ? request.ImageInfo.MetaDataDictionary : new Dictionary<String, List<string>>() { },
-                        FileRefId = request.ImageInfo.FileRefId,
-                        ImageQuality = ImageQuality.original,
-                        ImgManipulationServiceId = request.ImageInfo.ImgManipulationServiceId
-                    },
-                    Byte = CompressedImageBytes,
-                    UserId = request.UserId,
-                    SolnId = request.SolnId,
-                    BToken = request.BToken,
-                    RToken = request.RToken
-                });
-                Log.Info("-------------------------------------------------Pushed to Queue after Cloudinary");
+                        ImageInfo = new ImageMeta()
+                        {
+                            FileName = request.ImageInfo.FileName,
+                            FileCategory = request.ImageInfo.FileCategory,
+                            FileType = request.ImageInfo.FileType,
+                            Length = CompressedImageBytes.Length,
+                            MetaDataDictionary = (request.ImageInfo.MetaDataDictionary != null) ? request.ImageInfo.MetaDataDictionary : new Dictionary<String, List<string>>() { },
+                            FileRefId = request.ImageInfo.FileRefId,
+                            ImageQuality = ImageQuality.original,
+                            ImgManipulationServiceId = request.ImageInfo.ImgManipulationServiceId
+                        },
+                        Byte = CompressedImageBytes,
+                        UserId = request.UserId,
+                        SolnId = request.SolnId,
+                        BToken = request.BToken,
+                        RToken = request.RToken
+                    });
+                    Log.Info("-------------------------------------------------Pushed to Queue after Cloudinary");
 
+                    UpdateCounter(_ebConnectionFactory.DataDB, cust_id[0].ToInt(), IsCloudDown: 1);
+
+                }
             }
             catch (Exception e)
             {
@@ -471,6 +485,42 @@ namespace ExpressBase.MessageQueue.MQServices
             res = (int)table.Rows[0][0];
             return res;
         }
+        public bool UpdateCounter(IDatabase DataDB, int CustomerId, int IsFtp = 0, int IsCloudDown = 0, int IsCloudUp = 0, int IsUpld = 0)
+        {
+            int res = 0;
 
+            try
+            {
+                string MapQuery = @"
+INSERT INTO 
+    eb_image_migration_counter 
+    (customer_id, ftp_get, cldnry_up, cldnry_dwn, upld)
+VALUES
+    (@customer_id, @ftp, @cldw, @cldup, @upld)
+ 
+ON CONFLICT(customer_id)
+DO
+ UPDATE
+   SET 
+        ftp_get = eb_image_migration_counter.ftp_get + @ftp, 
+        cldnry_up = eb_image_migration_counter.cldnry_up + @cldup , 
+        cldnry_dwn = eb_image_migration_counter.cldnry_dwn + @cldw, 
+        upld = eb_image_migration_counter.upld + @upld;";
+                DbParameter[] MapParams =
+                {
+                        DataDB.GetNewParameter("customer_id", EbDbTypes.Int32, CustomerId),
+                        DataDB.GetNewParameter("ftp", EbDbTypes.Int32, IsFtp),
+                        DataDB.GetNewParameter("cldup", EbDbTypes.Int32, IsCloudUp),
+                        DataDB.GetNewParameter("cldw", EbDbTypes.Int32, IsCloudDown),
+                        DataDB.GetNewParameter("upld", EbDbTypes.Int32, IsUpld)
+            };
+                res = DataDB.DoNonQuery(MapQuery, MapParams);
+            }
+            catch (Exception e)
+            {
+                Log.Error("Counter: " + e.Message);
+            }
+            return (res > 0);
+        }
     }
 }
