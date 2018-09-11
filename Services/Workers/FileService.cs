@@ -42,15 +42,19 @@ namespace ExpressBase.MessageQueue.MQServices
                 string sql = @"
 INSERT INTO
     eb_files_ref_variations 
-    (eb_files_ref_id, filestore_sid, length, is_image)
+    (eb_files_ref_id, filestore_sid, length, is_image, filedb_con_id)
 VALUES 
-    (:refid, :filestoresid, :length, :is_image) RETURNING id";
+    (:refid, :filestoresid, :length, :is_image, :filedb_con_id) RETURNING id";
 
                 DbParameter[] parameters =
                 {
                         _ebConnectionFactory.DataDB.GetNewParameter("filestoresid",EbDbTypes.String, filestore_sid),
                         _ebConnectionFactory.DataDB.GetNewParameter("refid",EbDbTypes.Int32, request.FileRefId),
+
                         _ebConnectionFactory.DataDB.GetNewParameter("length",EbDbTypes.Int64, request.Byte.Length),
+
+                        _ebConnectionFactory.DataDB.GetNewParameter("filedb_con_id", EbDbTypes.Int32, _ebConnectionFactory.FilesDB.InfraConId),
+
                         _ebConnectionFactory.DataDB.GetNewParameter("is_image",EbDbTypes.Boolean, 'F')
                 };
 
@@ -88,17 +92,20 @@ VALUES
                 string sql = @"
 INSERT INTO
     eb_files_ref_variations 
-    (eb_files_ref_id, filestore_sid, length, imagequality_id, is_image, img_manp_ser_con_id)
+    (eb_files_ref_id, filestore_sid, length, imagequality_id, is_image, img_manp_ser_con_id, filedb_con_id)
 VALUES 
-    (:refid, :filestoreid, :length, :imagequality_id, :is_image, :imgmanpserid) RETURNING id";
+    (:refid, :filestoreid, :length, :imagequality_id, :is_image, :imgmanpserid, :filedb_con_id) RETURNING id";
                 DbParameter[] parameters =
                 {
                         _ebConnectionFactory.DataDB.GetNewParameter("refid", EbDbTypes.Int32, request.ImageRefId),
                         _ebConnectionFactory.DataDB.GetNewParameter("filestoreid", EbDbTypes.String, filestore_sid),
-                        _ebConnectionFactory.DataDB.GetNewParameter("refid", EbDbTypes.Int32, request.ImageRefId),
+
                         _ebConnectionFactory.DataDB.GetNewParameter("length", EbDbTypes.Int64, request.Byte.Length),
-                        _ebConnectionFactory.DataDB.GetNewParameter("imgmanpserid", EbDbTypes.Int32, request.ImgManpSerConId),
                         _ebConnectionFactory.DataDB.GetNewParameter("imagequality_id", EbDbTypes.Int32, (int)request.ImgQuality),
+
+                        _ebConnectionFactory.DataDB.GetNewParameter("filedb_con_id", EbDbTypes.Int32, _ebConnectionFactory.FilesDB.InfraConId),
+                        _ebConnectionFactory.DataDB.GetNewParameter("imgmanpserid", EbDbTypes.Int32, request.ImgManpSerConId),
+
                         _ebConnectionFactory.DataDB.GetNewParameter("is_image", EbDbTypes.Boolean, 'T')
                 };
 
