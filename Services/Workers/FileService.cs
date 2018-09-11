@@ -293,7 +293,7 @@ VALUES
 
                 if (_byte.Length > 0)
                 {
-                    //UpdateCounter(_ebConnectionFactory.DataDB, CustomerId: request.FileUrl.Key, IsFtp: 1);
+                    UpdateCounter(_ebConnectionFactory.DataDB, CustomerId: request.FileUrl.Key, IsFtp: 1);
 
                     UploadImageRequest ImageReq = new UploadImageRequest()
                     {
@@ -485,43 +485,43 @@ VALUES
             res = (int)table.Rows[0][0];
             return res;
         }
-        //        public bool UpdateCounter(IDatabase DataDB, int CustomerId, int IsFtp = 0, int IsCloudDown = 0, int IsCloudUp = 0, int IsUpld = 0)
-        //        {
-        //            int res = 0;
+        public bool UpdateCounter(IDatabase DataDB, int CustomerId, int IsFtp = 0, int IsCloudDown = 0, int IsCloudUp = 0, int IsUpld = 0)
+        {
+            int res = 0;
 
-        //            try
-        //            {
-        //                string MapQuery = @"
-        //INSERT INTO 
-        //    eb_image_migration_counter 
-        //    (customer_id, ftp_get, cldnry_up, cldnry_dwn, upld)
-        //VALUES
-        //    (@customer_id, @ftp, @cldw, @cldup, @upld)
+            try
+            {
+                string MapQuery = @"
+        INSERT INTO 
+            eb_image_migration_counter 
+            (customer_id, ftp_get, cldnry_up, cldnry_dwn, upld)
+        VALUES
+            (@customer_id, @ftp, @cldw, @cldup, @upld)
 
-        //ON CONFLICT(customer_id)
-        //DO
-        // UPDATE
-        //   SET 
-        //        ftp_get = eb_image_migration_counter.ftp_get + @ftp, 
-        //        cldnry_up = eb_image_migration_counter.cldnry_up + @cldup , 
-        //        cldnry_dwn = eb_image_migration_counter.cldnry_dwn + @cldw, 
-        //        upld = eb_image_migration_counter.upld + @upld;";
-        //                DbParameter[] MapParams =
-        //                {
-        //                        DataDB.GetNewParameter("customer_id", EbDbTypes.Int32, CustomerId),
-        //                        DataDB.GetNewParameter("ftp", EbDbTypes.Int32, IsFtp),
-        //                        DataDB.GetNewParameter("cldup", EbDbTypes.Int32, IsCloudUp),
-        //                        DataDB.GetNewParameter("cldw", EbDbTypes.Int32, IsCloudDown),
-        //                        DataDB.GetNewParameter("upld", EbDbTypes.Int32, IsUpld)
-        //            };
-        //                res = DataDB.DoNonQuery(MapQuery, MapParams);
-        //            }
-        //            catch (Exception e)
-        //            {
-        //                Log.Error("Counter: " + e.Message);
-        //            }
-        //            return (res > 0);
-        //        }
+        ON CONFLICT(customer_id)
+        DO
+         UPDATE
+           SET 
+                ftp_get = eb_image_migration_counter.ftp_get + @ftp, 
+                cldnry_up = eb_image_migration_counter.cldnry_up + @cldup , 
+                cldnry_dwn = eb_image_migration_counter.cldnry_dwn + @cldw, 
+                upld = eb_image_migration_counter.upld + @upld;";
+                DbParameter[] MapParams =
+                {
+                                DataDB.GetNewParameter("customer_id", EbDbTypes.Int32, CustomerId),
+                                DataDB.GetNewParameter("ftp", EbDbTypes.Int32, IsFtp),
+                                DataDB.GetNewParameter("cldup", EbDbTypes.Int32, IsCloudUp),
+                                DataDB.GetNewParameter("cldw", EbDbTypes.Int32, IsCloudDown),
+                                DataDB.GetNewParameter("upld", EbDbTypes.Int32, IsUpld)
+                    };
+                res = DataDB.DoNonQuery(MapQuery, MapParams);
+            }
+            catch (Exception e)
+            {
+                Log.Error("Counter: " + e.Message);
+            }
+            return (res > 0);
+        }
 
         private int GetFileRefId(IDatabase datadb, int userId, string filename, string filetype, string tags, EbFileCategory ebFileCategory)
         {
