@@ -420,6 +420,7 @@ namespace ExpressBase.MessageQueue.MQServices
                 UpdateCounter(_ebConnectionFactory.DataDB, cust_id[0].ToInt(), IsCloudUp: 1);
 
                 byte[] CompressedImageBytes;
+                byte[] ThumbnailBytes;
 
                 using (var client = new HttpClient())
                 {
@@ -434,7 +435,18 @@ namespace ExpressBase.MessageQueue.MQServices
                     }
                     else
                     {
-                        throw new Exception();
+                        throw new Exception("Cloudinary Error: Image Not Downloaded");
+                    }
+
+                    var ThumbnailRes = client.GetAsync(_ebConnectionFactory.ImageManipulate.GetThumbnailImage(url)).Result;
+                    if (ThumbnailRes.IsSuccessStatusCode)
+                    {
+                        var responseContent = ThumbnailRes.Content;
+                        ThumbnailBytes = responseContent.ReadAsByteArrayAsync().Result;
+                    }
+                    else
+                    {
+                        throw new Exception("Cloudinary Error: Thumbnail Image Not Generated");
                     }
                 }
                 if (CompressedImageBytes.Length > 0)
@@ -463,6 +475,34 @@ namespace ExpressBase.MessageQueue.MQServices
                     UpdateCounter(_ebConnectionFactory.DataDB, cust_id[0].ToInt(), IsCloudDown: 1);
 
                 }
+
+                if (ThumbnailBytes.Length > 0)
+                {
+                    this.MessageProducer3.Publish(new UploadImageRequest()
+                    {
+                        ImageInfo = new ImageMeta()
+                        {
+                            FileName = request.ImageInfo.FileName,
+                            FileCategory = request.ImageInfo.FileCategory,
+                            FileType = request.ImageInfo.FileType,
+                            Length = ThumbnailBytes.Length,
+                            MetaDataDictionary = (request.ImageInfo.MetaDataDictionary != null) ? request.ImageInfo.MetaDataDictionary : new Dictionary<String, List<string>>() { },
+                            FileRefId = request.ImageInfo.FileRefId,
+                            ImageQuality = ImageQuality.small,
+                            ImgManipulationServiceId = request.ImageInfo.ImgManipulationServiceId
+                        },
+                        Byte = ThumbnailBytes,
+                        UserId = request.UserId,
+                        SolnId = request.SolnId,
+                        BToken = request.BToken,
+                        RToken = request.RToken
+                    });
+                    Log.Info("-------------------------------------------------Pushed to Queue after Cloudinary");
+
+                    UpdateCounter(_ebConnectionFactory.DataDB, cust_id[0].ToInt(), IsCloudDown: 1);
+
+                }
+
             }
             catch (Exception e)
             {
