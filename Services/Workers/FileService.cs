@@ -33,40 +33,41 @@ namespace ExpressBase.MessageQueue.MQServices
             {
                 EbConnectionFactory _ebConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
 
-                request.FileDetails.FileStoreId = _ebConnectionFactory.FilesDB.UploadFile(
-                    request.FileDetails.FileName,
-                    (request.FileDetails.MetaDataDictionary != null) ? request.FileDetails.MetaDataDictionary : new Dictionary<String, List<string>>() { },
+                string filestore_sid = _ebConnectionFactory.FilesDB.UploadFile(
+                    request.FileRefId.ToString(),
                     request.Byte,
-                    request.FileDetails.FileCategory
+                    request.FileCategory
                     );
 
-                this.ServerEventClient.BearerToken = request.BToken;
-                this.ServerEventClient.RefreshToken = request.RToken;
-                this.ServerEventClient.RefreshTokenUri = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_GET_ACCESS_TOKEN_URL);
-                this.ServerEventClient.Post<NotifyResponse>(new NotifyUserIdRequest
-                {
-                    Msg = request.FileDetails,
-                    Selector = StaticFileConstants.UPLOADSUCCESS,
-                    ToUserAuthId = request.UserAuthId,
-                });
+                string sql = @"
+INSERT INTO
+    eb_files_ref_variations 
+    (filestore_id, length, is_image)
+VALUES 
+    (:filestoreid, :length, :is_image) RETURNING id";
 
-                bool IsPersisted = Persist(new FileMetaPersistRequest
+                DbParameter[] parameters =
                 {
-                    FileDetails = new FileMeta
+                        _ebConnectionFactory.DataDB.GetNewParameter("filestoreid",EbDbTypes.String, filestore_sid),
+                        _ebConnectionFactory.DataDB.GetNewParameter("refid",EbDbTypes.Int32, request.FileRefId),
+                        _ebConnectionFactory.DataDB.GetNewParameter("length",EbDbTypes.Int64, request.Byte.Length),
+                        _ebConnectionFactory.DataDB.GetNewParameter("is_image",EbDbTypes.Boolean, 'F')
+                };
+
+                var iCount = _ebConnectionFactory.DataDB.DoQuery(sql, parameters);
+
+                if (iCount.Rows.Capacity > 0)
+                {
+                    this.ServerEventClient.BearerToken = request.BToken;
+                    this.ServerEventClient.RefreshToken = request.RToken;
+                    this.ServerEventClient.RefreshTokenUri = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_GET_ACCESS_TOKEN_URL);
+                    this.ServerEventClient.Post<NotifyResponse>(new NotifyUserIdRequest
                     {
-                        FileStoreId = request.FileDetails.FileStoreId,
-                        FileName = request.FileDetails.FileName,
-                        MetaDataDictionary = (request.FileDetails.MetaDataDictionary != null) ? request.FileDetails.MetaDataDictionary : new Dictionary<String, List<string>>() { },
-                        Length = request.Byte.Length,
-                        FileType = request.FileDetails.FileType,
-                        FileCategory = request.FileDetails.FileCategory,
-                        FileRefId = request.FileDetails.FileRefId
-                    },
-                    SolnId = request.SolnId,
-                    UserId = request.UserId
-                }, _ebConnectionFactory.DataDB);
-
-
+                        Msg = request.FileRefId,
+                        Selector = StaticFileConstants.UPLOADSUCCESS,
+                        ToUserAuthId = request.UserAuthId,
+                    });
+                }
             }
             catch (Exception e)
             {
@@ -82,42 +83,39 @@ namespace ExpressBase.MessageQueue.MQServices
             {
                 EbConnectionFactory _ebConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
 
-                request.ImageInfo.FileStoreId = _ebConnectionFactory.FilesDB.UploadFile(
-                    ((request.ImageInfo.FileName != null) ? request.ImageInfo.FileName : String.Empty),
-                    (request.ImageInfo.MetaDataDictionary != null) ? request.ImageInfo.MetaDataDictionary : new Dictionary<String, List<string>>() { },
-                    request.Byte,
-                    request.ImageInfo.FileCategory
-                    );
+                string filestore_sid = _ebConnectionFactory.FilesDB.UploadFile(request.ImageRefId.ToString(), request.Byte, request.FileCategory);
 
-                this.ServerEventClient.BearerToken = request.BToken;
-                this.ServerEventClient.RefreshToken = request.RToken;
-                this.ServerEventClient.RefreshTokenUri = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_GET_ACCESS_TOKEN_URL);
-                this.ServerEventClient.Post<NotifyResponse>(new NotifyUserIdRequest
+                string sql = @"
+INSERT INTO
+    eb_files_ref_variations 
+    (filestore_id, length, imagequality_id, is_image, img_manp_ser_id)
+VALUES 
+    (:filestoreid, :length, :imagequality_id, :is_image, :imgmanpserid) RETURNING id";
+                DbParameter[] parameters =
                 {
-                    Msg = request.ImageInfo,
-                    Selector = StaticFileConstants.UPLOADSUCCESS,
-                    ToUserAuthId = request.UserAuthId,
-                });
 
-                bool IsPersisted = Persist(new FileMetaPersistRequest
+                        _ebConnectionFactory.DataDB.GetNewParameter("filestoreid",EbDbTypes.String, filestore_sid),
+                        _ebConnectionFactory.DataDB.GetNewParameter("refid",EbDbTypes.Int32, request.ImageRefId),
+                        _ebConnectionFactory.DataDB.GetNewParameter("length",EbDbTypes.Int64, request.Byte.Length),
+                        _ebConnectionFactory.DataDB.GetNewParameter("imgmanpserid", EbDbTypes.Int32, request.ImgManpSerConId),
+                        _ebConnectionFactory.DataDB.GetNewParameter("imagequality_id",EbDbTypes.Int32, (int)request.ImgQuality),
+                        _ebConnectionFactory.DataDB.GetNewParameter("is_image",EbDbTypes.Boolean, 'T')
+                };
+
+                var iCount = _ebConnectionFactory.DataDB.DoQuery(sql, parameters);
+
+                if (iCount.Rows.Capacity > 0)
                 {
-                    FileDetails = new FileMeta
+                    this.ServerEventClient.BearerToken = request.BToken;
+                    this.ServerEventClient.RefreshToken = request.RToken;
+                    this.ServerEventClient.RefreshTokenUri = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_GET_ACCESS_TOKEN_URL);
+                    this.ServerEventClient.Post<NotifyResponse>(new NotifyUserIdRequest
                     {
-                        FileStoreId = request.ImageInfo.FileStoreId,
-                        FileName = request.ImageInfo.FileName,
-                        MetaDataDictionary = (request.ImageInfo.MetaDataDictionary != null) ? request.ImageInfo.MetaDataDictionary : new Dictionary<String, List<string>>() { },
-                        Length = request.Byte.Length,
-                        FileType = request.ImageInfo.FileType,
-                        FileCategory = request.ImageInfo.FileCategory,
-                        FileRefId = request.ImageInfo.FileRefId,
-                        ImgManipulationServiceId = request.ImageInfo.ImgManipulationServiceId
-                    },
-                    SolnId = request.SolnId,
-                    UserId = request.UserId
-                }, _ebConnectionFactory.DataDB);
-
-                if (request.ImageInfo.ImageQuality == ImageQuality.large)
-                    Log.Info("--------------------------------------------Image from Cloudinary Uploaded");
+                        Msg = filestore_sid,
+                        Selector = StaticFileConstants.UPLOADSUCCESS,
+                        ToUserAuthId = request.UserAuthId,
+                    });
+                }
             }
             catch (Exception e)
             {
@@ -125,33 +123,6 @@ namespace ExpressBase.MessageQueue.MQServices
                 return new EbMqResponse();
             }
             return new EbMqResponse { Result = true };
-        }
-
-        private bool Persist(FileMetaPersistRequest request, IDatabase dataDb)
-        {
-            string tag = string.Empty;
-            if (request.FileDetails.MetaDataDictionary != null)
-                foreach (var items in request.FileDetails.MetaDataDictionary)
-                {
-                    tag = string.Join(CharConstants.COMMA, items.Value);
-                }
-
-            string sql = "UPDATE eb_files_ref SET (filename, userid, filestore_id, length, filetype, tags, filecategory, uploadts, img_manp_ser_id) = (@filename, @userid, @filestoreid, @length, @filetype, @tags, @filecategory, CURRENT_TIMESTAMP, @imgmanpserid) WHERE id = @refid RETURNING id";
-            DbParameter[] parameters =
-            {
-                        dataDb.GetNewParameter("userid", EbDbTypes.Int32, request.UserId),
-                        dataDb.GetNewParameter("filestoreid",EbDbTypes.String, request.FileDetails.FileStoreId),
-                        dataDb.GetNewParameter("refid",EbDbTypes.Int32, request.FileDetails.FileRefId),
-                        dataDb.GetNewParameter("filename",EbDbTypes.String, ((request.FileDetails.FileName != null) ? request.FileDetails.FileName : String.Empty)),
-                        dataDb.GetNewParameter("length",EbDbTypes.Int64, request.FileDetails.Length),
-                        dataDb.GetNewParameter("filetype",EbDbTypes.String, (String.IsNullOrEmpty(request.FileDetails.FileType))? StaticFileConstants.PNG : request.FileDetails.FileType),
-                        dataDb.GetNewParameter("tags",EbDbTypes.String, tag),
-                        dataDb.GetNewParameter("filecategory",EbDbTypes.Int16, request.FileDetails.FileCategory),
-                        dataDb.GetNewParameter("imgmanpserid", EbDbTypes.Int32, request.FileDetails.ImgManipulationServiceId)
-            };
-            var iCount = dataDb.DoQuery(sql, parameters);
-
-            return (iCount.Rows.Count > 0);
         }
 
         //public string Post(ImageResizeRequest request)
@@ -323,15 +294,8 @@ namespace ExpressBase.MessageQueue.MQServices
 
                     UploadImageRequest ImageReq = new UploadImageRequest()
                     {
-                        ImageInfo = new ImageMeta()
-                        {
-                            FileCategory = EbFileCategory.Images,
-                            FileName = request.FileUrl.Value.Split('/').Last(),
-                            FileType = request.FileUrl.Value.Split('.').Last(),
-                            ImageQuality = ImageQuality.original,
-                            Length = _byte.Length,
-                            MetaDataDictionary = dict,
-                        },
+                        ImgQuality = ImageQuality.original,
+                        FileCategory = EbFileCategory.Images,
                         Byte = _byte,
                         UserId = request.UserId,
                         SolnId = request.SolnId,
@@ -339,17 +303,17 @@ namespace ExpressBase.MessageQueue.MQServices
                         RToken = request.RToken
                     };
 
-                    ImageReq.ImageInfo.FileRefId = UploadImageRequest.GetFileRefId(_ebConnectionFactory.DataDB, request.UserId, ImageReq.ImageInfo.FileName, ImageReq.ImageInfo.FileType, String.Empty, ImageReq.ImageInfo.FileCategory);
+                    ImageReq.ImageRefId = GetFileRefId(_ebConnectionFactory.DataDB, request.UserId, request.FileUrl.Value.Split('/').Last(), request.FileUrl.Value.Split('.').Last(), String.Empty, EbFileCategory.Images);
 
-                    Console.WriteLine(String.Format(@"File Recieved :{0}({1}) ", ImageReq.ImageInfo.FileName, ImageReq.ImageInfo.Length));
+                    Console.WriteLine(@"File Recieved) ");
 
                     object _imgenum = null;
 
-                    bool isImage = (Enum.TryParse(typeof(ImageTypes), ImageReq.ImageInfo.FileType.ToString().ToLower(), out _imgenum));
+                    bool isImage = (Enum.TryParse(typeof(ImageTypes), request.FileUrl.Value.Split('.').Last().ToLower(), out _imgenum));
 
-                    bool compress = ((ImageReq.ImageInfo.Length > 614400) ? true : false);
+                    bool compress = ((ImageReq.Byte.Length > 614400) ? true : false);
 
-                    if (MapFilesWithUser(_ebConnectionFactory, request.FileUrl.Key, ImageReq.ImageInfo.FileRefId) < 1)
+                    if (MapFilesWithUser(_ebConnectionFactory, request.FileUrl.Key, ImageReq.ImageRefId) < 1)
                         throw new Exception("File Mapping Failed");
                     if (isImage)
                     {
@@ -357,15 +321,13 @@ namespace ExpressBase.MessageQueue.MQServices
                         {
                             CloudinaryUploadRequest cloudinaryUpload = new CloudinaryUploadRequest()
                             {
-                                ImageInfo = ImageReq.ImageInfo,
+                                ImageRefId = ImageReq.ImageRefId.ToString(),
                                 ImageBytes = ImageReq.Byte,
                                 UserId = request.UserId,
                                 SolnId = request.SolnId,
                                 BToken = request.BToken,
                                 RToken = request.RToken
                             };
-
-                            cloudinaryUpload.ImageInfo.ImgManipulationServiceId = _ebConnectionFactory.ImageManipulate.InfraConId;
 
                             this.MessageProducer3.Publish(cloudinaryUpload);
 
@@ -381,14 +343,8 @@ namespace ExpressBase.MessageQueue.MQServices
                     {
                         this.MessageProducer3.Publish(new UploadFileRequest()
                         {
-                            FileDetails = new FileMeta()
-                            {
-                                FileName = ImageReq.ImageInfo.FileName,
-                                FileType = ImageReq.ImageInfo.FileType,
-                                FileCategory = EbFileCategory.File,
-                                FileRefId = ImageReq.ImageInfo.FileRefId,
-                                Length = ImageReq.ImageInfo.Length
-                            },
+                            FileRefId = ImageReq.ImageRefId,
+                            FileCategory = EbFileCategory.File,
                             Byte = ImageReq.Byte,
                             UserId = request.UserId,
                             SolnId = request.SolnId,
@@ -412,12 +368,9 @@ namespace ExpressBase.MessageQueue.MQServices
             {
                 EbConnectionFactory _ebConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
                 string url = _ebConnectionFactory.ImageManipulate.Resize
-                    (request.ImageBytes, request.ImageInfo, (int)(52428800 / request.ImageInfo.Length));
+                    (request.ImageBytes, request.ImageRefId.ToString(), (int)(52428800 / request.ImageBytes.Length));
 
-                List<string> cust_id = new List<string>();
-                request.ImageInfo.MetaDataDictionary.TryGetValue("CustomerId", out cust_id);
-
-                UpdateCounter(_ebConnectionFactory.DataDB, cust_id[0].ToInt(), IsCloudUp: 1);
+                //UpdateCounter(_ebConnectionFactory.DataDB, cust_id[0].ToInt(), IsCloudUp: 1);
 
                 byte[] CompressedImageBytes;
 
@@ -460,7 +413,7 @@ namespace ExpressBase.MessageQueue.MQServices
                     });
                     Log.Info("-------------------------------------------------Pushed to Queue after Cloudinary");
 
-                    UpdateCounter(_ebConnectionFactory.DataDB, cust_id[0].ToInt(), IsCloudDown: 1);
+                    //UpdateCounter(_ebConnectionFactory.DataDB, cust_id[0].ToInt(), IsCloudDown: 1);
 
                 }
             }
@@ -522,5 +475,29 @@ DO
             }
             return (res > 0);
         }
+
+        private int GetFileRefId(IDatabase datadb, int userId, string filename, string filetype, string tags, EbFileCategory ebFileCategory)
+        {
+            string IdFetchQuery =
+        @"INSERT INTO
+    eb_files_ref (userid, filename, filetype, tags, filecategory) 
+VALUES 
+    (@userid, @filename, @filetype, @tags, @filecategory) 
+RETURNING id";
+
+            DbParameter[] parameters =
+               {
+                        datadb.GetNewParameter("userid", EbDbTypes.Int32, userId),
+                        datadb.GetNewParameter("filename", EbDbTypes.String, filename),
+                        datadb.GetNewParameter("filetype", EbDbTypes.String, filetype),
+                        datadb.GetNewParameter("tags", EbDbTypes.String, tags),
+                        datadb.GetNewParameter("filecategory", EbDbTypes.Int16, ebFileCategory)
+            };
+            var table = this.EbConnectionFactory.DataDB.DoQuery(IdFetchQuery, parameters);
+
+            return (int)table.Rows[0][0];
+
+        }
+
     }
 }
