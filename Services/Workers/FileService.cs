@@ -292,9 +292,12 @@ VALUES
                     {
                         ImgQuality = ImageQuality.original,
                         FileCategory = EbFileCategory.Images,
+
                         Byte = _byte,
+
                         UserId = request.UserId,
                         SolnId = request.SolnId,
+
                         BToken = request.BToken,
                         RToken = request.RToken
                     };
@@ -319,8 +322,10 @@ VALUES
                             {
                                 ImageRefId = ImageReq.ImageRefId.ToString(),
                                 ImageBytes = ImageReq.Byte,
+
                                 UserId = request.UserId,
                                 SolnId = request.SolnId,
+
                                 BToken = request.BToken,
                                 RToken = request.RToken
                             };
@@ -341,9 +346,12 @@ VALUES
                         {
                             FileRefId = ImageReq.ImageRefId,
                             FileCategory = EbFileCategory.File,
+
                             Byte = ImageReq.Byte,
+
                             UserId = request.UserId,
                             SolnId = request.SolnId,
+
                             BToken = request.BToken,
                             RToken = request.RToken
                         });
@@ -411,9 +419,13 @@ VALUES
                         FileCategory = EbFileCategory.Images,
                         ImageRefId = request.ImageRefId.ToInt(),
                         ImgQuality = ImageQuality.original,
+                        ImgManpSerConId = _ebConnectionFactory.ImageManipulate.InfraConId,
+
                         Byte = CompressedImageBytes,
+
                         UserId = request.UserId,
                         SolnId = request.SolnId,
+
                         BToken = request.BToken,
                         RToken = request.RToken
                     });
@@ -428,9 +440,13 @@ VALUES
                         FileCategory = EbFileCategory.Images,
                         ImageRefId = request.ImageRefId.ToInt(),
                         ImgQuality = ImageQuality.small,
+                        ImgManpSerConId = _ebConnectionFactory.ImageManipulate.InfraConId,
+
                         Byte = ThumbnailBytes,
+
                         UserId = request.UserId,
                         SolnId = request.SolnId,
+
                         BToken = request.BToken,
                         RToken = request.RToken
                     });
