@@ -3,7 +3,6 @@ using ExpressBase.Common.Constants;
 using ExpressBase.Common.EbServiceStack.ReqNRes;
 using ExpressBase.Common.ServiceClients;
 using ExpressBase.Common.ServiceStack.Auth;
-//using ExpressBase.MessageQueue.Services.Quartz;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using Funq;
 using Microsoft.AspNetCore.Builder;
@@ -11,16 +10,17 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-//using Quartz;
 using ServiceStack;
 using ServiceStack.Auth;
 using ServiceStack.Logging;
 using ServiceStack.Messaging;
-//using ServiceStack.Quartz;
 using ServiceStack.RabbitMq;
 using ServiceStack.Redis;
 using System;
 using System.IdentityModel.Tokens.Jwt;
+//using Quartz;
+//using ServiceStack.Quartz;
+//using ExpressBase.MessageQueue.Services.Quartz;
 
 namespace ExpressBase.MessageQueue
 {
@@ -116,6 +116,7 @@ namespace ExpressBase.MessageQueue
             rabitFactory.ConnectionFactory.VirtualHost = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_RABBIT_VHOST);
 
             var mqServer = new RabbitMqServer(rabitFactory);
+
             mqServer.RetryCount = 1;
 
             mqServer.RegisterHandler<RefreshSolutionConnectionsRequest>(base.ExecuteMessage);
@@ -123,15 +124,16 @@ namespace ExpressBase.MessageQueue
             mqServer.RegisterHandler<UploadFileRequest>(base.ExecuteMessage);
             mqServer.RegisterHandler<UploadImageRequest>(base.ExecuteMessage);
 
-            mqServer.RegisterHandler<GetImageFtpRequest>(base.ExecuteMessage, 10);
-            mqServer.RegisterHandler<CloudinaryUploadRequest>(base.ExecuteMessage);
-            mqServer.RegisterHandler<CloudinaryUploadResponse>(base.ExecuteMessage);
+            mqServer.RegisterHandler<GetImageFtpRequest>(base.ExecuteMessage);
+            mqServer.RegisterHandler<CloudinaryUploadRequest>(base.ExecuteMessage, 2);
 
             mqServer.RegisterHandler<ExportApplicationRequest>(base.ExecuteMessage);
             mqServer.RegisterHandler<ImportApplicationRequest>(base.ExecuteMessage);
 
             mqServer.RegisterHandler<EmailServicesRequest>(base.ExecuteMessage);
             mqServer.RegisterHandler<PdfCreateServiceRequest>(base.ExecuteMessage);
+
+            mqServer.UsePolling = true;
 
             //mqServer.RegisterHandler<ImageResizeRequest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<FileMetaPersistRequest>(base.ExecuteMessage);
