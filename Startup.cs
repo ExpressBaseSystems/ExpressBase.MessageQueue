@@ -128,8 +128,6 @@ namespace ExpressBase.MessageQueue
             mqServer.RegisterHandler<GetImageFtpRequest>(base.ExecuteMessage);
             mqServer.RegisterHandler<CloudinaryUploadRequest>(base.ExecuteMessage, 2);
 
-            mqServer.UsePolling = true;
-
             //mqServer.RegisterHandler<ImageResizeRequest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<FileMetaPersistRequest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<EmailServicesMqRequest>(base.ExecuteMessage);
