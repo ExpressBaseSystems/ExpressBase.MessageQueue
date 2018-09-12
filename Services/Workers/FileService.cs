@@ -451,8 +451,8 @@ VALUES
 ON CONFLICT(customer_id)
 DO UPDATE SET 
 	ftp_get = eb_image_migration_counter.ftp_get + @ftp, 
-	cldnry_large = eb_image_migration_counter.cldnry_up + @cldl , 
-	cldnry_small = eb_image_migration_counter.cldnry_dwn + @clds, 
+	cldnry_large = eb_image_migration_counter.cldnry_large + @cldl , 
+	cldnry_small = eb_image_migration_counter.cldnry_small + @clds, 
 	is_exist = eb_image_migration_counter.is_exist + @exist, 
 	file_upld = eb_image_migration_counter.file_upld + @file, 
 	img_org = eb_image_migration_counter.cldnry_dwn + @img;";
