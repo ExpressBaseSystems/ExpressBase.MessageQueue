@@ -455,7 +455,7 @@ DO UPDATE SET
 	cldnry_small = eb_image_migration_counter.cldnry_small + @clds, 
 	is_exist = eb_image_migration_counter.is_exist + @exist, 
 	file_upld = eb_image_migration_counter.file_upld + @file, 
-	img_org = eb_image_migration_counter.cldnry_dwn + @img;";
+	img_org = eb_image_migration_counter.img_org + @img;";
                 DbParameter[] MapParams =
                 {
                                 DataDB.GetNewParameter("customer_id", EbDbTypes.Int32, CustomerId),
