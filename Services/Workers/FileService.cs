@@ -6,17 +6,13 @@ using ExpressBase.Common.Enums;
 using ExpressBase.Common.ServerEvents_Artifacts;
 using ExpressBase.Common.ServiceClients;
 using ExpressBase.Common.Structures;
-using ExpressBase.MessageQueue.Services;
-using Flurl.Http;
+using ExpressBase.Objects.Services;
 using ServiceStack;
 using ServiceStack.Messaging;
 using System;
-using System.Collections.Generic;
 using System.Data.Common;
 using System.Linq;
-using System.Net;
 using System.Net.Http;
-using System.Threading.Tasks;
 
 namespace ExpressBase.MessageQueue.MQServices
 {

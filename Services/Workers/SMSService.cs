@@ -1,6 +1,5 @@
 ﻿using ExpressBase.Common.Data;
 using ExpressBase.Common.Structures;
-using ExpressBase.MessageQueue.Services;
 using ExpressBase.Objects.Services;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using ServiceStack;
