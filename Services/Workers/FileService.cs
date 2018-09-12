@@ -287,15 +287,20 @@ VALUES
             {
                 long size = _ebConnectionFactory.FTP.GetFileSize(request.FileUrl.Value);
 
+
                 if (size > 0)
                 {
-                    UpdateCounter(_ebConnectionFactory.DataDB, CustomerId: request.FileUrl.Key, IsExist: 1);
+                    int id = AddEntry(_ebConnectionFactory.DataDB, CustomerId: request.FileUrl.Key, IsExist: 1);
+                    if (id > 0)
+                        Log.Info("Counter Updated");
+
 
                     byte[] _byte = _ebConnectionFactory.FTP.Download(request.FileUrl.Value);
 
                     if (_byte.Length > 0)
                     {
-                        UpdateCounter(_ebConnectionFactory.DataDB, CustomerId: request.FileUrl.Key, IsFtp: 1);
+                        if (UpdateCounter(_ebConnectionFactory.DataDB, id: id, IsFtp: 1))
+                            Log.Info("Counter Updated");
 
                         UploadImageRequest ImageReq = new UploadImageRequest()
                         {
@@ -373,7 +378,10 @@ VALUES
                                 {
                                     ImageReq.Byte = CompressedImageBytes;
                                     this.MessageProducer3.Publish(ImageReq);
-                                    UpdateCounter(_ebConnectionFactory.DataDB, CustomerId: request.FileUrl.Key, IsCloudLarge: 1);
+
+                                    if (UpdateCounter(_ebConnectionFactory.DataDB, id: id, IsCloudLarge: 1))
+                                        Log.Info("Counter Updated");
+
                                     Log.Info("-------------------------------------------------Pushed Large to Queue after Cloudinary");
                                 }
 
@@ -381,15 +389,21 @@ VALUES
                                 {
                                     ImageReq.ImgQuality = ImageQuality.small;
                                     ImageReq.Byte = ThumbnailBytes;
+
                                     this.MessageProducer3.Publish(ImageReq);
-                                    UpdateCounter(_ebConnectionFactory.DataDB, CustomerId: request.FileUrl.Key, IsCloudSmall: 1);
+
+                                    if (UpdateCounter(_ebConnectionFactory.DataDB, id : id, IsCloudSmall: 1))
+                                        Log.Info("Counter Updated");
+
                                     Log.Info("-------------------------------------------------Pushed Small to Queue after Cloudinary");
                                 }
                             }
                             else
                             {
                                 this.MessageProducer3.Publish(ImageReq);
-                                UpdateCounter(_ebConnectionFactory.DataDB, CustomerId: request.FileUrl.Key, IsImg: 1);
+
+                                if (UpdateCounter(_ebConnectionFactory.DataDB, id: id, IsImg: 1))
+                                    Log.Info("Counter Updated");
 
                                 Log.Info("-------------------------------------------------Pushed Original to Queue");
                             }
@@ -409,7 +423,7 @@ VALUES
                                 BToken = request.BToken,
                                 RToken = request.RToken
                             });
-                            UpdateCounter(_ebConnectionFactory.DataDB, CustomerId: request.FileUrl.Key, IsFile: 1);
+                            UpdateCounter(_ebConnectionFactory.DataDB, id: id, IsFile: 1);
                         }
                     }
                 }
@@ -436,33 +450,28 @@ VALUES
             return res;
         }
 
-        public bool UpdateCounter(IDatabase DataDB, int CustomerId, int IsFtp = 0, int IsCloudLarge = 0, int IsCloudSmall = 0, int IsExist = 0, int IsFile = 0, int IsImg = 0)
+        public bool UpdateCounter(IDatabase DataDB, int id, int IsFtp = 0, int IsCloudLarge = 0, int IsCloudSmall = 0, int IsFile = 0, int IsImg = 0)
         {
             int res = 0;
 
             try
             {
                 string MapQuery = @"
-INSERT INTO 
-       eb_image_migration_counter 
-      (customer_id, ftp_get, cldnry_large, cldnry_small, is_exist, file_upld, img_org)
-VALUES
-      (@customer_id, @ftp, @cldl, @clds, @exist, @file, @img)
-ON CONFLICT(customer_id)
-DO UPDATE SET 
+UPDATE 
+    eb_image_migration_counter
+SET 
 	ftp_get = eb_image_migration_counter.ftp_get + @ftp, 
 	cldnry_large = eb_image_migration_counter.cldnry_large + @cldl , 
 	cldnry_small = eb_image_migration_counter.cldnry_small + @clds, 
-	is_exist = eb_image_migration_counter.is_exist + @exist, 
 	file_upld = eb_image_migration_counter.file_upld + @file, 
-	img_org = eb_image_migration_counter.img_org + @img;";
+	img_org = eb_image_migration_counter.img_org + @img;
+WHERE eb_image_migration_counter.id = @id";
                 DbParameter[] MapParams =
                 {
-                                DataDB.GetNewParameter("customer_id", EbDbTypes.Int32, CustomerId),
+                                DataDB.GetNewParameter("id", EbDbTypes.Int32, id),
                                 DataDB.GetNewParameter("ftp", EbDbTypes.Int32, IsFtp),
                                 DataDB.GetNewParameter("cldl", EbDbTypes.Int32, IsCloudLarge),
                                 DataDB.GetNewParameter("clds", EbDbTypes.Int32, IsCloudSmall),
-                                DataDB.GetNewParameter("exist", EbDbTypes.Int32, IsExist),
                                 DataDB.GetNewParameter("file", EbDbTypes.Int32, IsFile),
                                 DataDB.GetNewParameter("img", EbDbTypes.Int32, IsImg)
                     };
@@ -475,6 +484,32 @@ DO UPDATE SET
             return (res > 0);
         }
 
+
+        public int AddEntry(IDatabase DataDB, int CustomerId, int IsExist = 0)
+        {
+            int res = 0;
+
+            try
+            {
+                string MapQuery = @"
+INSERT INTO 
+       eb_image_migration_counter 
+      (customer_id, is_exist)
+VALUES
+      (@customer_id, @exist)";
+                DbParameter[] MapParams =
+                {
+                                DataDB.GetNewParameter("customer_id", EbDbTypes.Int32, CustomerId),
+                                DataDB.GetNewParameter("exist", EbDbTypes.Int32, IsExist),
+                    };
+                res = DataDB.DoNonQuery(MapQuery, MapParams);
+            }
+            catch (Exception e)
+            {
+                Log.Error("Counter: " + e.Message);
+            }
+            return res;
+        }
         private int GetFileRefId(IDatabase datadb, int userId, string filename, string filetype, string tags, EbFileCategory ebFileCategory)
         {
             try
