@@ -290,8 +290,7 @@ VALUES
 
                 if (size > 0)
                 {
-                    int id = AddEntry(_ebConnectionFactory.DataDB, CustomerId: request.FileUrl.Key, IsExist: 1);
-                    if (id > 0)
+                    if (AddEntry(_ebConnectionFactory.DataDB, CustomerId: request.FileUrl.Key, IsExist: 1))
                         Log.Info("Counter Updated");
 
 
@@ -299,7 +298,7 @@ VALUES
 
                     if (_byte.Length > 0)
                     {
-                        if (UpdateCounter(_ebConnectionFactory.DataDB, id: id, IsFtp: 1))
+                        if (UpdateCounter(_ebConnectionFactory.DataDB, id: request.FileUrl.Key, IsFtp: 1))
                             Log.Info("Counter Updated");
 
                         UploadImageRequest ImageReq = new UploadImageRequest()
@@ -379,7 +378,7 @@ VALUES
                                     ImageReq.Byte = CompressedImageBytes;
                                     this.MessageProducer3.Publish(ImageReq);
 
-                                    if (UpdateCounter(_ebConnectionFactory.DataDB, id: id, IsCloudLarge: 1))
+                                    if (UpdateCounter(_ebConnectionFactory.DataDB, id: request.FileUrl.Key, IsCloudLarge: 1))
                                         Log.Info("Counter Updated");
 
                                     Log.Info("-------------------------------------------------Pushed Large to Queue after Cloudinary");
@@ -392,7 +391,7 @@ VALUES
 
                                     this.MessageProducer3.Publish(ImageReq);
 
-                                    if (UpdateCounter(_ebConnectionFactory.DataDB, id : id, IsCloudSmall: 1))
+                                    if (UpdateCounter(_ebConnectionFactory.DataDB, id: request.FileUrl.Key, IsCloudSmall: 1))
                                         Log.Info("Counter Updated");
 
                                     Log.Info("-------------------------------------------------Pushed Small to Queue after Cloudinary");
@@ -402,7 +401,7 @@ VALUES
                             {
                                 this.MessageProducer3.Publish(ImageReq);
 
-                                if (UpdateCounter(_ebConnectionFactory.DataDB, id: id, IsImg: 1))
+                                if (UpdateCounter(_ebConnectionFactory.DataDB, id: request.FileUrl.Key, IsImg: 1))
                                     Log.Info("Counter Updated");
 
                                 Log.Info("-------------------------------------------------Pushed Original to Queue");
@@ -423,7 +422,7 @@ VALUES
                                 BToken = request.BToken,
                                 RToken = request.RToken
                             });
-                            UpdateCounter(_ebConnectionFactory.DataDB, id: id, IsFile: 1);
+                            UpdateCounter(_ebConnectionFactory.DataDB, id: request.FileUrl.Key, IsFile: 1);
                         }
                     }
                 }
@@ -464,8 +463,8 @@ SET
 	cldnry_large = eb_image_migration_counter.cldnry_large + @cldl , 
 	cldnry_small = eb_image_migration_counter.cldnry_small + @clds, 
 	file_upld = eb_image_migration_counter.file_upld + @file, 
-	img_org = eb_image_migration_counter.img_org + @img;
-WHERE eb_image_migration_counter.id = @id";
+	img_org = eb_image_migration_counter.img_org + @img
+WHERE eb_image_migration_counter.customer_id = @id;";
                 DbParameter[] MapParams =
                 {
                                 DataDB.GetNewParameter("id", EbDbTypes.Int32, id),
@@ -485,7 +484,7 @@ WHERE eb_image_migration_counter.id = @id";
         }
 
 
-        public int AddEntry(IDatabase DataDB, int CustomerId, int IsExist = 0)
+        public bool AddEntry(IDatabase DataDB, int CustomerId, int IsExist = 0)
         {
             int res = 0;
 
@@ -496,7 +495,11 @@ INSERT INTO
        eb_image_migration_counter 
       (customer_id, is_exist)
 VALUES
-      (@customer_id, @exist)";
+      (@customer_id, @exist) 
+ON CONFLICT(customer_id)
+DO UPDATE
+SET
+    is_exist = eb_image_migration_counter.is_exist + @exist ";
                 DbParameter[] MapParams =
                 {
                                 DataDB.GetNewParameter("customer_id", EbDbTypes.Int32, CustomerId),
@@ -508,7 +511,7 @@ VALUES
             {
                 Log.Error("Counter: " + e.Message);
             }
-            return res;
+            return res > 0;
         }
         private int GetFileRefId(IDatabase datadb, int userId, string filename, string filetype, string tags, EbFileCategory ebFileCategory)
         {
