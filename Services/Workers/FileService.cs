@@ -285,171 +285,138 @@ VALUES
 
             try
             {
-                byte[] _byte = _ebConnectionFactory.FTP.Download(request.FileUrl.Value);
+                long size = _ebConnectionFactory.FTP.GetFileSize(request.FileUrl.Value);
 
-                if (_byte.Length > 0)
+                if (size > 0)
                 {
-                    UpdateCounter(_ebConnectionFactory.DataDB, CustomerId: request.FileUrl.Key, IsFtp: 1);
+                    UpdateCounter(_ebConnectionFactory.DataDB, CustomerId: request.FileUrl.Key, IsExist: 1);
 
-                    UploadImageRequest ImageReq = new UploadImageRequest()
+                    byte[] _byte = _ebConnectionFactory.FTP.Download(request.FileUrl.Value);
+
+                    if (_byte.Length > 0)
                     {
-                        ImgQuality = ImageQuality.original,
-                        FileCategory = EbFileCategory.Images,
+                        UpdateCounter(_ebConnectionFactory.DataDB, CustomerId: request.FileUrl.Key, IsFtp: 1);
 
-                        Byte = _byte,
-
-                        UserId = request.UserId,
-                        SolnId = request.SolnId,
-
-                        BToken = request.BToken,
-                        RToken = request.RToken
-                    };
-
-                    ImageReq.ImageRefId = GetFileRefId(_ebConnectionFactory.DataDB, request.UserId, request.FileUrl.Value.Split('/').Last(), request.FileUrl.Value.Split('.').Last(), String.Format(@"CustomerId: {0}", request.FileUrl.Key.ToString()), EbFileCategory.Images);
-
-                    Console.WriteLine(@"File Recieved) ");
-
-                    object _imgenum = null;
-
-                    bool isImage = (Enum.TryParse(typeof(ImageTypes), request.FileUrl.Value.Split('.').Last().ToLower(), out _imgenum));
-
-                    bool compress = ((ImageReq.Byte.Length > 614400) ? true : false);
-
-                    if (MapFilesWithUser(_ebConnectionFactory, request.FileUrl.Key, ImageReq.ImageRefId) < 1)
-                        throw new Exception("File Mapping Failed");
-                    if (isImage)
-                    {
-                        if (compress)
+                        UploadImageRequest ImageReq = new UploadImageRequest()
                         {
-                            CloudinaryUploadRequest cloudinaryUpload = new CloudinaryUploadRequest()
-                            {
-                                ImageRefId = ImageReq.ImageRefId.ToString(),
-                                ImageBytes = ImageReq.Byte,
+                            ImgQuality = ImageQuality.original,
+                            FileCategory = EbFileCategory.Images,
 
-                                UserId = request.UserId,
-                                SolnId = request.SolnId,
-
-                                BToken = request.BToken,
-                                RToken = request.RToken
-                            };
-
-                            this.MessageProducer3.Publish(cloudinaryUpload);
-
-                            Log.Info("-------------------------------------------------Pushed to Queue to upload to Cloudinary");
-                        }
-                        else
-                        {
-                            this.MessageProducer3.Publish(ImageReq);
-                            Log.Info("-------------------------------------------------Pushed Original to Queue");
-                        }
-                    }
-                    else
-                    {
-                        this.MessageProducer3.Publish(new UploadFileRequest()
-                        {
-                            FileRefId = ImageReq.ImageRefId,
-                            FileCategory = EbFileCategory.File,
-
-                            Byte = ImageReq.Byte,
+                            Byte = _byte,
 
                             UserId = request.UserId,
                             SolnId = request.SolnId,
 
                             BToken = request.BToken,
                             RToken = request.RToken
-                        });
+                        };
+
+                        ImageReq.ImageRefId = GetFileRefId(_ebConnectionFactory.DataDB, request.UserId, request.FileUrl.Value.Split('/').Last(), request.FileUrl.Value.Split('.').Last(), String.Format(@"CustomerId: {0}", request.FileUrl.Key.ToString()), EbFileCategory.Images);
+
+                        Console.WriteLine(@"File Recieved) ");
+
+                        object _imgenum = null;
+
+                        bool isImage = (Enum.TryParse(typeof(ImageTypes), request.FileUrl.Value.Split('.').Last().ToLower(), out _imgenum));
+
+                        bool compress = ((ImageReq.Byte.Length > 614400) ? true : false);
+
+                        if (MapFilesWithUser(_ebConnectionFactory, request.FileUrl.Key, ImageReq.ImageRefId) < 1)
+                            throw new Exception("File Mapping Failed");
+                        if (isImage)
+                        {
+                            if (compress)
+                            {
+                                Log.Info("------------------------------------Need to Compress");
+                                string url = _ebConnectionFactory.ImageManipulate.Resize
+                                                    (ImageReq.Byte, ImageReq.ImageRefId.ToString(), (int)(52428800 / ImageReq.Byte.Length));
+
+                                byte[] CompressedImageBytes;
+                                byte[] ThumbnailBytes;
+
+                                using (var client = new HttpClient())
+                                {
+                                    var response = client.GetAsync(url).Result;
+
+                                    if (response.IsSuccessStatusCode)
+                                    {
+                                        var responseContent = response.Content;
+
+                                        // by calling .Result you are synchronously reading the result
+                                        CompressedImageBytes = responseContent.ReadAsByteArrayAsync().Result;
+                                    }
+                                    else
+                                    {
+                                        throw new Exception("Cloudinary Error: Image Not Downloaded");
+                                    }
+                                }
+
+                                using (var client = new HttpClient())
+                                {
+                                    var response = client.GetAsync("https://res.cloudinary.com/drifgiqrz/image/fetch/ar_1,c_fit,h_150/" + url).Result;
+
+                                    if (response.IsSuccessStatusCode)
+                                    {
+                                        var responseContent = response.Content;
+
+                                        // by calling .Result you are synchronously reading the result
+                                        ThumbnailBytes = responseContent.ReadAsByteArrayAsync().Result;
+                                    }
+                                    else
+                                    {
+                                        throw new Exception("Cloudinary Error: Transformed Image Not Available");
+                                    }
+
+                                }
+
+                                if (CompressedImageBytes.Length > 0)
+                                {
+                                    ImageReq.Byte = CompressedImageBytes;
+                                    this.MessageProducer3.Publish(ImageReq);
+                                    UpdateCounter(_ebConnectionFactory.DataDB, CustomerId: request.FileUrl.Key, IsCloudLarge: 1);
+                                    Log.Info("-------------------------------------------------Pushed Large to Queue after Cloudinary");
+                                }
+
+                                if (ThumbnailBytes.Length > 0)
+                                {
+                                    ImageReq.ImgQuality = ImageQuality.small;
+                                    ImageReq.Byte = ThumbnailBytes;
+                                    this.MessageProducer3.Publish(ImageReq);
+                                    UpdateCounter(_ebConnectionFactory.DataDB, CustomerId: request.FileUrl.Key, IsCloudSmall: 1);
+                                    Log.Info("-------------------------------------------------Pushed Small to Queue after Cloudinary");
+                                }
+                            }
+                            else
+                            {
+                                this.MessageProducer3.Publish(ImageReq);
+                                UpdateCounter(_ebConnectionFactory.DataDB, CustomerId: request.FileUrl.Key, IsImg: 1);
+
+                                Log.Info("-------------------------------------------------Pushed Original to Queue");
+                            }
+                        }
+                        else
+                        {
+                            this.MessageProducer3.Publish(new UploadFileRequest()
+                            {
+                                FileRefId = ImageReq.ImageRefId,
+                                FileCategory = EbFileCategory.File,
+
+                                Byte = ImageReq.Byte,
+
+                                UserId = request.UserId,
+                                SolnId = request.SolnId,
+
+                                BToken = request.BToken,
+                                RToken = request.RToken
+                            });
+                            UpdateCounter(_ebConnectionFactory.DataDB, CustomerId: request.FileUrl.Key, IsFile: 1);
+                        }
                     }
                 }
             }
             catch (Exception e)
             {
                 Log.Error("MQ Exception: " + e.ToString());
-                return new EbMqResponse();
-            }
-            return new EbMqResponse { Result = true };
-        }
-
-        public EbMqResponse Post(CloudinaryUploadRequest request)
-        {
-            try
-            {
-                EbConnectionFactory _ebConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
-
-                string url = _ebConnectionFactory.ImageManipulate.Resize
-                    (request.ImageBytes, request.ImageRefId.ToString(), (int)(52428800 / request.ImageBytes.Length));
-
-                byte[] CompressedImageBytes;
-                byte[] ThumbnailBytes;
-
-                using (var client = new HttpClient())
-                {
-                    var response = client.GetAsync(url).Result;
-
-                    if (response.IsSuccessStatusCode)
-                    {
-                        var responseContent = response.Content;
-
-                        // by calling .Result you are synchronously reading the result
-                        CompressedImageBytes = responseContent.ReadAsByteArrayAsync().Result;
-                    }
-                    else
-                    {
-                        throw new Exception("Cloudinary Error: Image Not Downloaded");
-                    }
-                }
-
-                using (var client = new HttpClient())
-                {
-                    var response = client.GetAsync("https://res.cloudinary.com/drifgiqrz/image/fetch/ar_1,c_fit,h_150/" + url).Result;
-
-                    if (response.IsSuccessStatusCode)
-                    {
-                        var responseContent = response.Content;
-
-                        // by calling .Result you are synchronously reading the result
-                        ThumbnailBytes = responseContent.ReadAsByteArrayAsync().Result;
-                    }
-                    else
-                    {
-                        throw new Exception("Cloudinary Error: Transformed Image Not Available");
-                    }
-
-                }
-                UploadImageRequest uploadImageRequest = new UploadImageRequest()
-                {
-                    FileCategory = EbFileCategory.Images,
-                    ImageRefId = request.ImageRefId.ToInt(),
-                    ImgQuality = ImageQuality.original,
-                    ImgManpSerConId = _ebConnectionFactory.ImageManipulate.InfraConId,
-
-                    Byte = CompressedImageBytes,
-
-                    UserId = request.UserId,
-                    SolnId = request.SolnId,
-
-                    BToken = request.BToken,
-                    RToken = request.RToken
-                };
-
-                if (CompressedImageBytes.Length > 0)
-                {
-                    this.MessageProducer3.Publish(uploadImageRequest);
-                    Log.Info("-------------------------------------------------Pushed to Queue after Cloudinary");
-                }
-
-                if (ThumbnailBytes.Length > 0)
-                {
-                    uploadImageRequest.ImgQuality = ImageQuality.small;
-                    uploadImageRequest.Byte = ThumbnailBytes;
-
-                    this.MessageProducer3.Publish(uploadImageRequest);
-                    Log.Info("-------------------------------------------------Pushed to Queue after Cloudinary");
-                }
-
-            }
-            catch (Exception e)
-            {
-                Log.Error("ImageFTP:" + e.ToString());
                 return new EbMqResponse();
             }
             return new EbMqResponse { Result = true };
@@ -469,34 +436,35 @@ VALUES
             return res;
         }
 
-        public bool UpdateCounter(IDatabase DataDB, int CustomerId, int IsFtp = 0, int IsCloudDown = 0, int IsCloudUp = 0, int IsUpld = 0)
+        public bool UpdateCounter(IDatabase DataDB, int CustomerId, int IsFtp = 0, int IsCloudLarge = 0, int IsCloudSmall = 0, int IsExist = 0, int IsFile = 0, int IsImg = 0)
         {
             int res = 0;
 
             try
             {
                 string MapQuery = @"
-        INSERT INTO 
-            eb_image_migration_counter 
-            (customer_id, ftp_get, cldnry_up, cldnry_dwn, upld)
-        VALUES
-            (@customer_id, @ftp, @cldw, @cldup, @upld)
-
-        ON CONFLICT(customer_id)
-        DO
-         UPDATE
-           SET 
-                ftp_get = eb_image_migration_counter.ftp_get + @ftp, 
-                cldnry_up = eb_image_migration_counter.cldnry_up + @cldup , 
-                cldnry_dwn = eb_image_migration_counter.cldnry_dwn + @cldw, 
-                upld = eb_image_migration_counter.upld + @upld;";
+INSERT INTO 
+       eb_image_migration_counter 
+      (customer_id, ftp_get, cldnry_large, cldnry_small, is_exist, file_upld, img_org)
+VALUES
+      (@customer_id, @ftp, @cldl, @clds, @exist, @file, @img)
+ON CONFLICT(customer_id)
+DO UPDATE SET 
+	ftp_get = eb_image_migration_counter.ftp_get + @ftp, 
+	cldnry_large = eb_image_migration_counter.cldnry_up + @cldl , 
+	cldnry_small = eb_image_migration_counter.cldnry_dwn + @clds, 
+	is_exist = eb_image_migration_counter.is_exist + @exist, 
+	file_upld = eb_image_migration_counter.file_upld + @file, 
+	img_org = eb_image_migration_counter.cldnry_dwn + @img;";
                 DbParameter[] MapParams =
                 {
                                 DataDB.GetNewParameter("customer_id", EbDbTypes.Int32, CustomerId),
                                 DataDB.GetNewParameter("ftp", EbDbTypes.Int32, IsFtp),
-                                DataDB.GetNewParameter("cldup", EbDbTypes.Int32, IsCloudUp),
-                                DataDB.GetNewParameter("cldw", EbDbTypes.Int32, IsCloudDown),
-                                DataDB.GetNewParameter("upld", EbDbTypes.Int32, IsUpld)
+                                DataDB.GetNewParameter("cldl", EbDbTypes.Int32, IsCloudLarge),
+                                DataDB.GetNewParameter("clds", EbDbTypes.Int32, IsCloudSmall),
+                                DataDB.GetNewParameter("exist", EbDbTypes.Int32, IsExist),
+                                DataDB.GetNewParameter("file", EbDbTypes.Int32, IsFile),
+                                DataDB.GetNewParameter("img", EbDbTypes.Int32, IsImg)
                     };
                 res = DataDB.DoNonQuery(MapQuery, MapParams);
             }
