@@ -363,7 +363,7 @@ VALUES
             }
             catch (Exception e)
             {
-                Log.Error("MQ Exception: " + e.StackTrace);
+                Log.Error("MQ Exception: " + e.ToString());
                 return new EbMqResponse();
             }
             return new EbMqResponse { Result = true };
@@ -481,6 +481,7 @@ VALUES
             res = (int)table.Rows[0][0];
             return res;
         }
+
         public bool UpdateCounter(IDatabase DataDB, int CustomerId, int IsFtp = 0, int IsCloudDown = 0, int IsCloudUp = 0, int IsUpld = 0)
         {
             int res = 0;
