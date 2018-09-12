@@ -415,48 +415,35 @@ VALUES
                     }
 
                 }
+                UploadImageRequest uploadImageRequest = new UploadImageRequest()
+                {
+                    FileCategory = EbFileCategory.Images,
+                    ImageRefId = request.ImageRefId.ToInt(),
+                    ImgQuality = ImageQuality.original,
+                    ImgManpSerConId = _ebConnectionFactory.ImageManipulate.InfraConId,
+
+                    Byte = CompressedImageBytes,
+
+                    UserId = request.UserId,
+                    SolnId = request.SolnId,
+
+                    BToken = request.BToken,
+                    RToken = request.RToken
+                };
+
                 if (CompressedImageBytes.Length > 0)
                 {
-                    this.MessageProducer3.Publish(new UploadImageRequest()
-                    {
-                        FileCategory = EbFileCategory.Images,
-                        ImageRefId = request.ImageRefId.ToInt(),
-                        ImgQuality = ImageQuality.original,
-                        ImgManpSerConId = _ebConnectionFactory.ImageManipulate.InfraConId,
-
-                        Byte = CompressedImageBytes,
-
-                        UserId = request.UserId,
-                        SolnId = request.SolnId,
-
-                        BToken = request.BToken,
-                        RToken = request.RToken
-                    });
+                    this.MessageProducer3.Publish(uploadImageRequest);
                     Log.Info("-------------------------------------------------Pushed to Queue after Cloudinary");
-
                 }
 
                 if (ThumbnailBytes.Length > 0)
                 {
-                    this.MessageProducer3.Publish(new UploadImageRequest()
-                    {
-                        FileCategory = EbFileCategory.Images,
-                        ImageRefId = request.ImageRefId.ToInt(),
-                        ImgQuality = ImageQuality.small,
-                        ImgManpSerConId = _ebConnectionFactory.ImageManipulate.InfraConId,
+                    uploadImageRequest.ImgQuality = ImageQuality.small;
+                    uploadImageRequest.Byte = ThumbnailBytes;
 
-                        Byte = ThumbnailBytes,
-
-                        UserId = request.UserId,
-                        SolnId = request.SolnId,
-
-                        BToken = request.BToken,
-                        RToken = request.RToken
-                    });
+                    this.MessageProducer3.Publish(uploadImageRequest);
                     Log.Info("-------------------------------------------------Pushed to Queue after Cloudinary");
-
-                    //UpdateCounter(_ebConnectionFactory.DataDB, cust_id[0].ToInt(), IsCloudDown: 1);
-
                 }
 
             }
