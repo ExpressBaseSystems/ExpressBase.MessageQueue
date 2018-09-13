@@ -439,11 +439,15 @@ VALUES
         public EbMqResponse Post(CloudinaryResizeReq request)
         {
             EbMqResponse res = new EbMqResponse();
+            byte[]  _byte;
             try
             {
                 EbConnectionFactory _ebConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
+
+                _byte = _ebConnectionFactory.FilesDB.DownloadFileById(GetFileById(_ebConnectionFactory.DataDB, request.RefId), EbFileCategory.Images);
+
                 string thumb_url = _ebConnectionFactory.ImageManipulate.GetImgSize
-                                                    (request.Byte, request.RefId.ToString(), ImageQuality.small);
+                                                    (_byte, request.RefId.ToString(), ImageQuality.small);
                 byte[] ThumbnailBytes;
 
                 using (var client = new HttpClient())
@@ -602,5 +606,20 @@ RETURNING id";
             }
         }
 
+        private string GetFileById(IDatabase datadb, int refId)
+        {
+            string fQry = @"
+SELECT
+    filestore_sid 
+FROM 
+    eb_files_ref_variations
+WHERE 
+    eb_files_ref_id = :refid
+    AND imagequality_id = 0;";
+            DbParameter dbParameter = datadb.GetNewParameter("refid", EbDbTypes.Int32, refId);
+
+            var table = datadb.DoQuery(fQry, dbParameter);
+            return (string)table.Rows[0][0];
+        }
     }
 }
