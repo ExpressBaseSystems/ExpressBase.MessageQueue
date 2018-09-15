@@ -501,7 +501,7 @@ SET
     is_exist = @exist
 WHERE
     filename = @fname
-    AND customer_id = @cid)
+    AND customer_id = @cid
 RETURNING id";
                 DbParameter[] MapParams =
                 {
