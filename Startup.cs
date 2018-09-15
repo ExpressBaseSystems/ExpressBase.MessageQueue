@@ -124,8 +124,7 @@ namespace ExpressBase.MessageQueue
             mqServer.RegisterHandler<UploadFileRequest>(base.ExecuteMessage);
             mqServer.RegisterHandler<UploadImageRequest>(base.ExecuteMessage);
 
-            //mqServer.RegisterHandler<GetImageFtpRequest>(base.ExecuteMessage, 3);
-            mqServer.RegisterHandler<CloudinaryResizeReq>(base.ExecuteMessage);
+            mqServer.RegisterHandler<GetImageFtpRequest>(base.ExecuteMessage, 3);
 
 
             //mqServer.RegisterHandler<EmailServicesMqRequest>(base.ExecuteMessage);
