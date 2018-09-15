@@ -290,7 +290,7 @@ VALUES
 
                 if (size > 0)
                 {
-                    int id = FileExists(_ebConnectionFactory.DataDB, fname: request.FileUrl.Value.SplitOnLast('/').Last(), CustomerId: request.FileUrl.Key);
+                    int id = FileExists(_ebConnectionFactory.DataDB, fname: request.FileUrl.Value.SplitOnLast('/').Last(), CustomerId: request.FileUrl.Key, IsExist: 1);
                     if (id > 0)
                         Log.Info("Counter Updated (File Exists)");
                     else
@@ -342,7 +342,7 @@ VALUES
                             if (ImageReq.Byte.Length > 514400)
                             {
 
-                                Log.Info("------------------------------------Need to Compress");
+                                Log.Info("Need to Compress");
                                 string Clodinaryurl = _ebConnectionFactory.ImageManipulate.Resize
                                                     (ImageReq.Byte, ImageReq.ImageRefId.ToString(), (int)(42428800 / ImageReq.Byte.Length));
 
@@ -358,6 +358,8 @@ VALUES
 
                                         // by calling .Result you are synchronously reading the result
                                         ImageReq.Byte = responseContent.ReadAsByteArrayAsync().Result;
+                                        if (UpdateCounter(_ebConnectionFactory.DataDB, id: id, IsCloudLarge: 1))
+                                            Log.Info("Counter Updated (Recieved Large Image)");
                                     }
                                     else
                                     {
@@ -371,7 +373,7 @@ VALUES
 
 
                             this.MessageProducer3.Publish(ImageReq);
-                            Log.Info("-------------------------------------------------Pushed Image Large to Queue");
+                            Log.Info("Pushed Image Large to Queue");
 
 
                             //TO Get thumbnail
@@ -402,9 +404,9 @@ VALUES
 
                                 this.MessageProducer3.Publish(ImageReq);
 
-                                if (UpdateCounter(_ebConnectionFactory.DataDB, id: id, IsCloudLarge: 1))
+                                if (UpdateCounter(_ebConnectionFactory.DataDB, id: id, IsCloudSmall: 1))
                                     Log.Info("Counter Updated (Recieved SmallImage)");
-                                Log.Info("-------------------------------------------------Pushed Small to Queue after Cloudinary");
+                                Log.Info("Pushed Small to Queue after Cloudinary");
                             }
 
 
