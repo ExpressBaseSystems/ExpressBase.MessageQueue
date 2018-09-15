@@ -290,9 +290,11 @@ VALUES
 
                 if (size > 0)
                 {
-                    int id = FileExists(_ebConnectionFactory.DataDB, fname: request.FileUrl.Value, CustomerId: request.FileUrl.Key);
+                    int id = FileExists(_ebConnectionFactory.DataDB, fname: request.FileUrl.Value.SplitOnLast('/').Last(), CustomerId: request.FileUrl.Key);
                     if (id > 0)
-                        Log.Info("Counter Updated");
+                        Log.Info("Counter Updated (File Exists)");
+                    else
+                        Log.Info("Counter Not Updated (File Exists)");
 
 
                     byte[] _byte = _ebConnectionFactory.FTP.Download(request.FileUrl.Value);
@@ -300,7 +302,10 @@ VALUES
                     if (_byte.Length > 0)
                     {
                         if (UpdateCounter(_ebConnectionFactory.DataDB, id: id, IsFtp: 1))
-                            Log.Info("Counter Updated");
+                            Log.Info("Counter Updated (Byte Received)");
+                        else
+                            Log.Info("Counter Not Updated (Byte Received)");
+
 
                         UploadImageRequest ImageReq = new UploadImageRequest()
                         {
@@ -324,22 +329,21 @@ VALUES
 
                         bool isImage = (Enum.TryParse(typeof(ImageTypes), request.FileUrl.Value.Split('.').Last().ToLower(), out _imgenum));
 
-                        bool compress = ((ImageReq.Byte.Length > 514400) ? true : false);
-
                         if (MapFilesWithUser(_ebConnectionFactory, request.FileUrl.Key, ImageReq.ImageRefId) < 1)
                             throw new Exception("File Mapping Failed");
-
 
                         if (isImage)
                         {
                             byte[] ThumbnailBytes;
-                            string thumbUrl;
-                            string Clodinaryurl;
 
-                            if (compress)
+                            if (UpdateCounter(_ebConnectionFactory.DataDB, id: id, IsImg: 1))
+                                Log.Info("Counter Updated (IsImage)");
+
+                            if (ImageReq.Byte.Length > 514400)
                             {
+
                                 Log.Info("------------------------------------Need to Compress");
-                                Clodinaryurl = _ebConnectionFactory.ImageManipulate.Resize
+                                string Clodinaryurl = _ebConnectionFactory.ImageManipulate.Resize
                                                     (ImageReq.Byte, ImageReq.ImageRefId.ToString(), (int)(42428800 / ImageReq.Byte.Length));
 
                                 ImageReq.ImgManpSerConId = _ebConnectionFactory.ImageManipulate.InfraConId;
@@ -361,19 +365,13 @@ VALUES
                                     }
                                 }
 
-                                thumbUrl = "https://res.cloudinary.com/drifgiqrz/image/fetch/ar_1,c_fit,h_150/" + Clodinaryurl;
                             }
-                            else
-                            {
-                                thumbUrl = _ebConnectionFactory.ImageManipulate.GetImgSize(ImageReq.Byte, request.FileUrl.Value.Split('/').Last(), ImageQuality.small);
-                            }
+
+                            string thumbUrl = _ebConnectionFactory.ImageManipulate.GetImgSize(ImageReq.Byte, request.FileUrl.Value.Split('/').Last(), ImageQuality.small);
 
 
                             this.MessageProducer3.Publish(ImageReq);
-
-                            if (UpdateCounter(_ebConnectionFactory.DataDB, id: id, IsImg: 1))
-                                Log.Info("Counter Updated");
-                            Log.Info("-------------------------------------------------Pushed Original to Queue");
+                            Log.Info("-------------------------------------------------Pushed Image Large to Queue");
 
 
                             //TO Get thumbnail
@@ -405,12 +403,11 @@ VALUES
                                 this.MessageProducer3.Publish(ImageReq);
 
                                 if (UpdateCounter(_ebConnectionFactory.DataDB, id: id, IsCloudLarge: 1))
-                                    Log.Info("Counter Updated");
-
-                                Log.Info("-------------------------------------------------Pushed Large to Queue after Cloudinary");
+                                    Log.Info("Counter Updated (Recieved SmallImage)");
+                                Log.Info("-------------------------------------------------Pushed Small to Queue after Cloudinary");
                             }
-                            
-                            
+
+
                         }
                         else
                         {
@@ -427,7 +424,8 @@ VALUES
                                 BToken = request.BToken,
                                 RToken = request.RToken
                             });
-                            UpdateCounter(_ebConnectionFactory.DataDB, id: id, IsFile: 1);
+                            if(UpdateCounter(_ebConnectionFactory.DataDB, id: id, IsFile: 1))
+                                    Log.Info("Counter Updated (File Pushed)");
                         }
                     }
                 }
@@ -510,7 +508,8 @@ RETURNING id";
                                 DataDB.GetNewParameter("exist", EbDbTypes.Int32, IsExist),
                     };
                 var tab = DataDB.DoQuery(AddQuery, MapParams);
-                res = Convert.ToInt32(tab.Rows[0][0]);
+                if (tab.Rows.Capacity > 0)
+                    res = Convert.ToInt32(tab.Rows[0][0]);
             }
             catch (Exception e)
             {
