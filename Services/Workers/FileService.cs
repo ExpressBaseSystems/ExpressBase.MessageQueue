@@ -114,7 +114,7 @@ VALUES
                     this.ServerEventClient.RefreshTokenUri = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_GET_ACCESS_TOKEN_URL);
                     this.ServerEventClient.Post<NotifyResponse>(new NotifyUserIdRequest
                     {
-                        Msg = filestore_sid,
+                        Msg = request.ImageRefId,
                         Selector = StaticFileConstants.UPLOADSUCCESS,
                         ToUserAuthId = request.UserAuthId,
                     });
