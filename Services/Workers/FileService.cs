@@ -94,7 +94,7 @@ VALUES
             {
                 this.EbConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
 
-                if (this.EbConnectionFactory.ImageManipulate != null && request.Byte.Length < 307200)
+                if (this.EbConnectionFactory.ImageManipulate != null && request.Byte.Length > 307200)
                 {
                     int qlty = (int)(20480000 / request.Byte.Length);
 
