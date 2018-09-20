@@ -84,7 +84,7 @@ VALUES
             return new EbMqResponse { Result = true };
         }
 
-        public EbMqResponse Post(UploadImageRequest request)
+        public EbMqResponse Post(UploadImageRequest1 request)
         {
             this.ServerEventClient.BearerToken = request.BToken;
             this.ServerEventClient.RefreshToken = request.RToken;
@@ -94,28 +94,36 @@ VALUES
             {
                 this.EbConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
 
-                if (this.EbConnectionFactory.ImageManipulate != null)
+                if (this.EbConnectionFactory.ImageManipulate != null && request.Byte.Length < 307200)
                 {
+                    int qlty = (int)(20480000 / request.Byte.Length);
+
+                    qlty = qlty < 7 ? 7 : qlty;
+
                     string Clodinaryurl = this.EbConnectionFactory.ImageManipulate.Resize
-                                                        (request.Byte, request.ImageRefId.ToString(), (int)(42428800 / request.Byte.Length));
+                                                        (request.Byte, request.ImageRefId.ToString(), qlty);
 
-                    request.ImgManpSerConId = this.EbConnectionFactory.ImageManipulate.InfraConId;
 
-                    using (var client = new HttpClient())
+                    if (!string.IsNullOrEmpty(Clodinaryurl))
                     {
-                        var response = client.GetAsync(Clodinaryurl).Result;
-
-                        if (response.IsSuccessStatusCode)
+                        using (var client = new HttpClient())
                         {
-                            var responseContent = response.Content;
-                            request.Byte = responseContent.ReadAsByteArrayAsync().Result;
+                            var response = client.GetAsync(Clodinaryurl).Result;
+
+                            if (response.IsSuccessStatusCode)
+                            {
+                                var responseContent = response.Content;
+
+                                request.ImgManpSerConId = this.EbConnectionFactory.ImageManipulate.InfraConId;
+                                request.Byte = responseContent.ReadAsByteArrayAsync().Result;
+                            }
                         }
                     }
                 }
 
                 string filestore_sid = this.EbConnectionFactory.FilesDB.UploadFile(request.ImageRefId.ToString(), request.Byte, request.FileCategory);
 
-                
+
                 DbParameter[] parameters =
                 {
                         this.EbConnectionFactory.DataDB.GetNewParameter("refid", EbDbTypes.Int32, request.ImageRefId),
@@ -338,7 +346,7 @@ VALUES
                             Log.Info("Counter Not Updated (Byte Received)");
 
 
-                        UploadImageRequest ImageReq = new UploadImageRequest()
+                        UploadImageRequest1 ImageReq = new UploadImageRequest1()
                         {
                             ImgQuality = ImageQuality.original,
                             FileCategory = EbFileCategory.Images,
@@ -374,7 +382,7 @@ VALUES
                             {
                                 int qlty = (int)(20480000 / ImageReq.Byte.Length);
 
-                                qlty = qlty > 90 ? 90 : qlty;
+                                qlty = qlty < 7 ? 7 : qlty;
 
                                 Log.Info("Need to Compress");
                                 string Clodinaryurl = this.EbConnectionFactory.ImageManipulate.Resize
@@ -460,8 +468,8 @@ VALUES
                                 BToken = request.BToken,
                                 RToken = request.RToken
                             });
-                            if(UpdateCounter(this.EbConnectionFactory.DataDB, id: id, IsFile: 1))
-                                    Log.Info("Counter Updated (File Pushed)");
+                            if (UpdateCounter(this.EbConnectionFactory.DataDB, id: id, IsFile: 1))
+                                Log.Info("Counter Updated (File Pushed)");
                         }
                     }
                 }
