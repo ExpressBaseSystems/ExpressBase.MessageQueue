@@ -84,7 +84,7 @@ VALUES
             return new EbMqResponse { Result = true };
         }
 
-        public EbMqResponse Post(UploadImageRequest1 request)
+        public EbMqResponse Post(UploadImageRequest request)
         {
             this.ServerEventClient.BearerToken = request.BToken;
             this.ServerEventClient.RefreshToken = request.RToken;
@@ -346,7 +346,7 @@ VALUES
                             Log.Info("Counter Not Updated (Byte Received)");
 
 
-                        UploadImageRequest1 ImageReq = new UploadImageRequest1()
+                        UploadImageRequest ImageReq = new UploadImageRequest()
                         {
                             ImgQuality = ImageQuality.original,
                             FileCategory = EbFileCategory.Images,
