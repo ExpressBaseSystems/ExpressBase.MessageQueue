@@ -21,6 +21,13 @@ namespace ExpressBase.MessageQueue.MQServices
     {
         public FileServiceInternal(IMessageProducer _mqp, IMessageQueueClient _mqc, IEbServerEventClient _sec) : base(_mqp, _mqc, _sec) { }
 
+        private const string _imgRefUpdateSql = @"
+INSERT INTO
+    eb_files_ref_variations 
+    (eb_files_ref_id, filestore_sid, length, imagequality_id, is_image, img_manp_ser_con_id, filedb_con_id)
+VALUES 
+    (:refid, :filestoreid, :length, :imagequality_id, :is_image, :imgmanpserid, :filedb_con_id) RETURNING id";
+
         public EbMqResponse Post(UploadFileRequest request)
         {
             Log.Info("Inside Upload Img MQ Service");
@@ -79,39 +86,54 @@ VALUES
 
         public EbMqResponse Post(UploadImageRequest request)
         {
+            this.ServerEventClient.BearerToken = request.BToken;
+            this.ServerEventClient.RefreshToken = request.RToken;
+            this.ServerEventClient.RefreshTokenUri = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_GET_ACCESS_TOKEN_URL);
+
             try
             {
-                EbConnectionFactory _ebConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
+                this.EbConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
 
-                string filestore_sid = _ebConnectionFactory.FilesDB.UploadFile(request.ImageRefId.ToString(), request.Byte, request.FileCategory);
+                if (this.EbConnectionFactory.ImageManipulate != null)
+                {
+                    string Clodinaryurl = this.EbConnectionFactory.ImageManipulate.Resize
+                                                        (request.Byte, request.ImageRefId.ToString(), (int)(42428800 / request.Byte.Length));
 
-                string sql = @"
-INSERT INTO
-    eb_files_ref_variations 
-    (eb_files_ref_id, filestore_sid, length, imagequality_id, is_image, img_manp_ser_con_id, filedb_con_id)
-VALUES 
-    (:refid, :filestoreid, :length, :imagequality_id, :is_image, :imgmanpserid, :filedb_con_id) RETURNING id";
+                    request.ImgManpSerConId = this.EbConnectionFactory.ImageManipulate.InfraConId;
+
+                    using (var client = new HttpClient())
+                    {
+                        var response = client.GetAsync(Clodinaryurl).Result;
+
+                        if (response.IsSuccessStatusCode)
+                        {
+                            var responseContent = response.Content;
+                            request.Byte = responseContent.ReadAsByteArrayAsync().Result;
+                        }
+                    }
+                }
+
+                string filestore_sid = this.EbConnectionFactory.FilesDB.UploadFile(request.ImageRefId.ToString(), request.Byte, request.FileCategory);
+
+                
                 DbParameter[] parameters =
                 {
-                        _ebConnectionFactory.DataDB.GetNewParameter("refid", EbDbTypes.Int32, request.ImageRefId),
-                        _ebConnectionFactory.DataDB.GetNewParameter("filestoreid", EbDbTypes.String, filestore_sid),
+                        this.EbConnectionFactory.DataDB.GetNewParameter("refid", EbDbTypes.Int32, request.ImageRefId),
+                        this.EbConnectionFactory.DataDB.GetNewParameter("filestoreid", EbDbTypes.String, filestore_sid),
 
-                        _ebConnectionFactory.DataDB.GetNewParameter("length", EbDbTypes.Int64, request.Byte.Length),
-                        _ebConnectionFactory.DataDB.GetNewParameter("imagequality_id", EbDbTypes.Int32, (int)request.ImgQuality),
+                        this.EbConnectionFactory.DataDB.GetNewParameter("length", EbDbTypes.Int64, request.Byte.Length),
+                        this.EbConnectionFactory.DataDB.GetNewParameter("imagequality_id", EbDbTypes.Int32, (int)request.ImgQuality),
 
-                        _ebConnectionFactory.DataDB.GetNewParameter("filedb_con_id", EbDbTypes.Int32, _ebConnectionFactory.FilesDB.InfraConId),
-                        _ebConnectionFactory.DataDB.GetNewParameter("imgmanpserid", EbDbTypes.Int32, request.ImgManpSerConId),
+                        this.EbConnectionFactory.DataDB.GetNewParameter("filedb_con_id", EbDbTypes.Int32, this.EbConnectionFactory.FilesDB.InfraConId),
+                        this.EbConnectionFactory.DataDB.GetNewParameter("imgmanpserid", EbDbTypes.Int32, request.ImgManpSerConId),
 
-                        _ebConnectionFactory.DataDB.GetNewParameter("is_image", EbDbTypes.Boolean, 'T')
+                        this.EbConnectionFactory.DataDB.GetNewParameter("is_image", EbDbTypes.Boolean, 'T')
                 };
 
-                var iCount = _ebConnectionFactory.DataDB.DoQuery(sql, parameters);
+                var iCount = this.EbConnectionFactory.DataDB.DoQuery(_imgRefUpdateSql, parameters);
 
                 if (iCount.Rows.Capacity > 0)
                 {
-                    this.ServerEventClient.BearerToken = request.BToken;
-                    this.ServerEventClient.RefreshToken = request.RToken;
-                    this.ServerEventClient.RefreshTokenUri = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_GET_ACCESS_TOKEN_URL);
                     this.ServerEventClient.Post<NotifyResponse>(new NotifyUserIdRequest
                     {
                         Msg = request.ImageRefId,
@@ -122,6 +144,15 @@ VALUES
             }
             catch (Exception e)
             {
+                if (request.ImgQuality == ImageQuality.original)
+                {
+                    this.ServerEventClient.Post<NotifyResponse>(new NotifyUserIdRequest
+                    {
+                        Msg = request.ImageRefId,
+                        Selector = StaticFileConstants.UPLOADFAILURE,
+                        ToUserAuthId = request.UserAuthId,
+                    });
+                }
                 Log.Error("UploadImage:" + e.ToString());
                 return new EbMqResponse();
             }
@@ -283,25 +314,25 @@ VALUES
         {
             try
             {
-                EbConnectionFactory _ebConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
+                this.EbConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
 
-                long size = _ebConnectionFactory.FTP.GetFileSize(request.FileUrl.Value);
+                long size = this.EbConnectionFactory.FTP.GetFileSize(request.FileUrl.Value);
 
 
                 if (size > 0)
                 {
-                    int id = FileExists(_ebConnectionFactory.DataDB, fname: request.FileUrl.Value.SplitOnLast('/').Last(), CustomerId: request.FileUrl.Key, IsExist: 1);
+                    int id = FileExists(this.EbConnectionFactory.DataDB, fname: request.FileUrl.Value.SplitOnLast('/').Last(), CustomerId: request.FileUrl.Key, IsExist: 1);
                     if (id > 0)
                         Log.Info("Counter Updated (File Exists)");
                     else
                         Log.Info("Counter Not Updated (File Exists)");
 
 
-                    byte[] _byte = _ebConnectionFactory.FTP.Download(request.FileUrl.Value);
+                    byte[] _byte = this.EbConnectionFactory.FTP.Download(request.FileUrl.Value);
 
                     if (_byte.Length > 0)
                     {
-                        if (UpdateCounter(_ebConnectionFactory.DataDB, id: id, IsFtp: 1))
+                        if (UpdateCounter(this.EbConnectionFactory.DataDB, id: id, IsFtp: 1))
                             Log.Info("Counter Updated (Byte Received)");
                         else
                             Log.Info("Counter Not Updated (Byte Received)");
@@ -321,7 +352,7 @@ VALUES
                             RToken = request.RToken
                         };
 
-                        ImageReq.ImageRefId = GetFileRefId(_ebConnectionFactory.DataDB, request.UserId, request.FileUrl.Value.Split('/').Last(), request.FileUrl.Value.Split('.').Last(), String.Format(@"CustomerId: {0}", request.FileUrl.Key.ToString()), EbFileCategory.Images);
+                        ImageReq.ImageRefId = GetFileRefId(this.EbConnectionFactory.DataDB, request.UserId, request.FileUrl.Value.Split('/').Last(), request.FileUrl.Value.Split('.').Last(), String.Format(@"CustomerId: {0}", request.FileUrl.Key.ToString()), EbFileCategory.Images);
 
                         Console.WriteLine(@"File Recieved) ");
 
@@ -329,24 +360,27 @@ VALUES
 
                         bool isImage = (Enum.TryParse(typeof(ImageTypes), request.FileUrl.Value.Split('.').Last().ToLower(), out _imgenum));
 
-                        if (MapFilesWithUser(_ebConnectionFactory, request.FileUrl.Key, ImageReq.ImageRefId) < 1)
+                        if (MapFilesWithUser(this.EbConnectionFactory, request.FileUrl.Key, ImageReq.ImageRefId) < 1)
                             throw new Exception("File Mapping Failed");
 
                         if (isImage)
                         {
                             byte[] ThumbnailBytes;
 
-                            if (UpdateCounter(_ebConnectionFactory.DataDB, id: id, IsImg: 1))
+                            if (UpdateCounter(this.EbConnectionFactory.DataDB, id: id, IsImg: 1))
                                 Log.Info("Counter Updated (IsImage)");
 
-                            if (ImageReq.Byte.Length > 514400)
+                            if (ImageReq.Byte.Length > 307200)
                             {
+                                int qlty = (int)(20480000 / ImageReq.Byte.Length);
+
+                                qlty = qlty > 90 ? 90 : qlty;
 
                                 Log.Info("Need to Compress");
-                                string Clodinaryurl = _ebConnectionFactory.ImageManipulate.Resize
-                                                    (ImageReq.Byte, ImageReq.ImageRefId.ToString(), (int)(42428800 / ImageReq.Byte.Length));
+                                string Clodinaryurl = this.EbConnectionFactory.ImageManipulate.Resize
+                                                    (ImageReq.Byte, ImageReq.ImageRefId.ToString(), qlty);
 
-                                ImageReq.ImgManpSerConId = _ebConnectionFactory.ImageManipulate.InfraConId;
+                                ImageReq.ImgManpSerConId = this.EbConnectionFactory.ImageManipulate.InfraConId;
 
                                 using (var client = new HttpClient())
                                 {
@@ -358,7 +392,7 @@ VALUES
 
                                         // by calling .Result you are synchronously reading the result
                                         ImageReq.Byte = responseContent.ReadAsByteArrayAsync().Result;
-                                        if (UpdateCounter(_ebConnectionFactory.DataDB, id: id, IsCloudLarge: 1))
+                                        if (UpdateCounter(this.EbConnectionFactory.DataDB, id: id, IsCloudLarge: 1))
                                             Log.Info("Counter Updated (Recieved Large Image)");
                                     }
                                     else
@@ -369,7 +403,7 @@ VALUES
 
                             }
 
-                            string thumbUrl = _ebConnectionFactory.ImageManipulate.GetImgSize(ImageReq.Byte, request.FileUrl.Value.Split('/').Last(), ImageQuality.small);
+                            string thumbUrl = this.EbConnectionFactory.ImageManipulate.GetImgSize(ImageReq.Byte, request.FileUrl.Value.Split('/').Last(), ImageQuality.small);
 
 
                             this.MessageProducer3.Publish(ImageReq);
@@ -399,12 +433,12 @@ VALUES
                             if (ThumbnailBytes.Length > 0)
                             {
                                 ImageReq.Byte = ThumbnailBytes;
-                                ImageReq.ImgManpSerConId = _ebConnectionFactory.ImageManipulate.InfraConId;
+                                ImageReq.ImgManpSerConId = this.EbConnectionFactory.ImageManipulate.InfraConId;
                                 ImageReq.ImgQuality = ImageQuality.small;
 
                                 this.MessageProducer3.Publish(ImageReq);
 
-                                if (UpdateCounter(_ebConnectionFactory.DataDB, id: id, IsCloudSmall: 1))
+                                if (UpdateCounter(this.EbConnectionFactory.DataDB, id: id, IsCloudSmall: 1))
                                     Log.Info("Counter Updated (Recieved SmallImage)");
                                 Log.Info("Pushed Small to Queue after Cloudinary");
                             }
@@ -426,7 +460,7 @@ VALUES
                                 BToken = request.BToken,
                                 RToken = request.RToken
                             });
-                            if(UpdateCounter(_ebConnectionFactory.DataDB, id: id, IsFile: 1))
+                            if(UpdateCounter(this.EbConnectionFactory.DataDB, id: id, IsFile: 1))
                                     Log.Info("Counter Updated (File Pushed)");
                         }
                     }
