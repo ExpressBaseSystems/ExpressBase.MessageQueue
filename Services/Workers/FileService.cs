@@ -167,6 +167,89 @@ VALUES
             return new EbMqResponse { Result = true };
         }
 
+        public EbMqResponse Post(UploadDpRequest request)
+        {
+            this.ServerEventClient.BearerToken = request.BToken;
+            this.ServerEventClient.RefreshToken = request.RToken;
+            this.ServerEventClient.RefreshTokenUri = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_GET_ACCESS_TOKEN_URL);
+
+            try
+            {
+                this.EbConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
+
+                if (this.EbConnectionFactory.ImageManipulate != null && request.Byte.Length > 307200)
+                {
+                    int qlty = (int)(20480000 / request.Byte.Length);
+
+                    qlty = qlty < 7 ? 7 : qlty;
+
+                    string Clodinaryurl = this.EbConnectionFactory.ImageManipulate.Resize
+                                                        (request.Byte, request.ImageRefId.ToString(), qlty);
+
+
+                    if (!string.IsNullOrEmpty(Clodinaryurl))
+                    {
+                        using (var client = new HttpClient())
+                        {
+                            var response = client.GetAsync(Clodinaryurl).Result;
+
+                            if (response.IsSuccessStatusCode)
+                            {
+                                var responseContent = response.Content;
+
+                                request.ImgManpSerConId = this.EbConnectionFactory.ImageManipulate.InfraConId;
+                                request.Byte = responseContent.ReadAsByteArrayAsync().Result;
+                            }
+                        }
+                    }
+                }
+
+                string filestore_sid = this.EbConnectionFactory.FilesDB.UploadFile(request.ImageRefId.ToString(), request.Byte, request.FileCategory);
+
+
+                DbParameter[] parameters =
+                {
+                        this.EbConnectionFactory.DataDB.GetNewParameter("refid", EbDbTypes.Int32, request.ImageRefId),
+                        this.EbConnectionFactory.DataDB.GetNewParameter("filestoreid", EbDbTypes.String, filestore_sid),
+
+                        this.EbConnectionFactory.DataDB.GetNewParameter("length", EbDbTypes.Int64, request.Byte.Length),
+                        this.EbConnectionFactory.DataDB.GetNewParameter("imagequality_id", EbDbTypes.Int32, (int)request.ImgQuality),
+
+                        this.EbConnectionFactory.DataDB.GetNewParameter("filedb_con_id", EbDbTypes.Int32, this.EbConnectionFactory.FilesDB.InfraConId),
+                        this.EbConnectionFactory.DataDB.GetNewParameter("imgmanpserid", EbDbTypes.Int32, request.ImgManpSerConId),
+
+                        this.EbConnectionFactory.DataDB.GetNewParameter("is_image", EbDbTypes.Boolean, 'T')
+                };
+
+                var iCount = this.EbConnectionFactory.DataDB.DoQuery(_imgRefUpdateSql, parameters);
+
+                if (iCount.Rows.Capacity > 0)
+                {
+                    this.ServerEventClient.Post<NotifyResponse>(new NotifyUserIdRequest
+                    {
+                        Msg = request.ImageRefId,
+                        Selector = StaticFileConstants.UPLOADSUCCESS,
+                        ToUserAuthId = request.UserAuthId,
+                    });
+                }
+            }
+            catch (Exception e)
+            {
+                if (request.ImgQuality == ImageQuality.original)
+                {
+                    this.ServerEventClient.Post<NotifyResponse>(new NotifyUserIdRequest
+                    {
+                        Msg = request.ImageRefId,
+                        Selector = StaticFileConstants.UPLOADFAILURE,
+                        ToUserAuthId = request.UserAuthId,
+                    });
+                }
+                Log.Error("UploadImage:" + e.ToString());
+                return new EbMqResponse();
+            }
+            return new EbMqResponse { Result = true };
+        }
+
         //public string Post(ImageResizeRequest request)
         //{
         //    UploadImageRequest uploadImageRequest = new UploadImageRequest();
