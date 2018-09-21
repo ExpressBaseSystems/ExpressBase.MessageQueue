@@ -22,11 +22,19 @@ namespace ExpressBase.MessageQueue.MQServices
         public FileServiceInternal(IMessageProducer _mqp, IMessageQueueClient _mqc, IEbServerEventClient _sec) : base(_mqp, _mqc, _sec) { }
 
         private const string _imgRefUpdateSql = @"
-INSERT INTO
-    eb_files_ref_variations 
-    (eb_files_ref_id, filestore_sid, length, imagequality_id, is_image, img_manp_ser_con_id, filedb_con_id)
-VALUES 
-    (:refid, :filestoreid, :length, :imagequality_id, :is_image, :imgmanpserid, :filedb_con_id) RETURNING id";
+            INSERT INTO
+                eb_files_ref_variations 
+                (eb_files_ref_id, filestore_sid, length, imagequality_id, is_image, img_manp_ser_con_id, filedb_con_id)
+            VALUES 
+                (:refid, :filestoreid, :length, :imagequality_id, :is_image, :imgmanpserid, :filedb_con_id) RETURNING id";
+
+        private const string _dpUpdateSql = @"
+            INSERT INTO
+                eb_files_ref_variations 
+                (eb_files_ref_id, filestore_sid, length, imagequality_id, is_image, img_manp_ser_con_id, filedb_con_id)
+            VALUES 
+                (:refid, :filestoreid, :length, :imagequality_id, :is_image, :imgmanpserid, :filedb_con_id) RETURNING id;
+            UPDATE eb_users SET dprefid = :refid WHERE id=:userid";
 
         public EbMqResponse Post(UploadFileRequest request)
         {
@@ -248,17 +256,15 @@ VALUES
                 {
                         this.EbConnectionFactory.DataDB.GetNewParameter("refid", EbDbTypes.Int32, request.ImageRefId),
                         this.EbConnectionFactory.DataDB.GetNewParameter("filestoreid", EbDbTypes.String, filestore_sid),
-
                         this.EbConnectionFactory.DataDB.GetNewParameter("length", EbDbTypes.Int64, request.Byte.Length),
                         this.EbConnectionFactory.DataDB.GetNewParameter("imagequality_id", EbDbTypes.Int32, (int)request.ImgQuality),
-
                         this.EbConnectionFactory.DataDB.GetNewParameter("filedb_con_id", EbDbTypes.Int32, this.EbConnectionFactory.FilesDB.InfraConId),
                         this.EbConnectionFactory.DataDB.GetNewParameter("imgmanpserid", EbDbTypes.Int32, request.ImgManpSerConId),
-
-                        this.EbConnectionFactory.DataDB.GetNewParameter("is_image", EbDbTypes.Boolean, 'T')
+                        this.EbConnectionFactory.DataDB.GetNewParameter("is_image", EbDbTypes.Boolean, 'T'),
+                        this.EbConnectionFactory.DataDB.GetNewParameter("userid", EbDbTypes.Int32, request.UserId)
                 };
 
-                var iCount = this.EbConnectionFactory.DataDB.DoQuery(_imgRefUpdateSql, parameters);
+                var iCount = this.EbConnectionFactory.DataDB.DoQuery(_dpUpdateSql, parameters);
 
                 if (iCount.Rows.Capacity > 0)
                 {
