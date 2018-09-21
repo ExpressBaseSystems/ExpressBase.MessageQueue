@@ -89,6 +89,7 @@ VALUES
             this.ServerEventClient.BearerToken = request.BToken;
             this.ServerEventClient.RefreshToken = request.RToken;
             this.ServerEventClient.RefreshTokenUri = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_GET_ACCESS_TOKEN_URL);
+            EbDataTable iCountOrg = new EbDataTable();
 
             try
             {
@@ -138,9 +139,9 @@ VALUES
                         this.EbConnectionFactory.DataDB.GetNewParameter("is_image", EbDbTypes.Boolean, 'T')
                 };
 
-                var iCount = this.EbConnectionFactory.DataDB.DoQuery(_imgRefUpdateSql, parameters);
+                iCountOrg = this.EbConnectionFactory.DataDB.DoQuery(_imgRefUpdateSql, parameters);
 
-                if (iCount.Rows.Capacity > 0)
+                if (iCountOrg.Rows.Capacity > 0)
                 {
                     this.ServerEventClient.Post<NotifyResponse>(new NotifyUserIdRequest
                     {
@@ -148,19 +149,55 @@ VALUES
                         Selector = StaticFileConstants.UPLOADSUCCESS,
                         ToUserAuthId = request.UserAuthId,
                     });
+                    string thumbUrl = this.EbConnectionFactory.ImageManipulate.GetImgSize(request.Byte, request.ImageRefId.ToString(), ImageQuality.small);
+
+                    byte[] ThumbnailBytes;
+                    //TO Get thumbnail
+                    using (var client = new HttpClient())
+                    {
+                        var response = client.GetAsync(thumbUrl).Result;
+
+                        if (response.IsSuccessStatusCode)
+                        {
+                            var responseContent = response.Content;
+
+                            // by calling .Result you are synchronously reading the result
+                            ThumbnailBytes = responseContent.ReadAsByteArrayAsync().Result;
+                            if (ThumbnailBytes.Length > 0)
+                            {
+                                filestore_sid = this.EbConnectionFactory.FilesDB.UploadFile(request.ImageRefId.ToString(), request.Byte, request.FileCategory);
+                                DbParameter[] parametersImageSmall =
+                                                {
+                                                        this.EbConnectionFactory.DataDB.GetNewParameter("refid", EbDbTypes.Int32, request.ImageRefId),
+                                                        this.EbConnectionFactory.DataDB.GetNewParameter("filestoreid", EbDbTypes.String, filestore_sid),
+
+                                                        this.EbConnectionFactory.DataDB.GetNewParameter("length", EbDbTypes.Int64, ThumbnailBytes.Length),
+                                                        this.EbConnectionFactory.DataDB.GetNewParameter("imagequality_id", EbDbTypes.Int32, (int)ImageQuality.small),
+
+                                                        this.EbConnectionFactory.DataDB.GetNewParameter("filedb_con_id", EbDbTypes.Int32, this.EbConnectionFactory.FilesDB.InfraConId),
+                                                        this.EbConnectionFactory.DataDB.GetNewParameter("imgmanpserid", EbDbTypes.Int32, request.ImgManpSerConId),
+
+                                                        this.EbConnectionFactory.DataDB.GetNewParameter("is_image", EbDbTypes.Boolean, 'T')
+                                                };
+
+                                var iCountSmall = this.EbConnectionFactory.DataDB.DoQuery(_imgRefUpdateSql, parametersImageSmall);
+                            }
+                        }
+
+
+                    }
                 }
             }
             catch (Exception e)
             {
-                if (request.ImgQuality == ImageQuality.original)
-                {
+                if (iCountOrg.Rows.Capacity == 0)
                     this.ServerEventClient.Post<NotifyResponse>(new NotifyUserIdRequest
                     {
                         Msg = request.ImageRefId,
                         Selector = StaticFileConstants.UPLOADFAILURE,
                         ToUserAuthId = request.UserAuthId,
                     });
-                }
+
                 Log.Error("UploadImage:" + e.ToString());
                 return new EbMqResponse();
             }
