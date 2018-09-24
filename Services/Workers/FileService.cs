@@ -174,6 +174,8 @@ VALUES
                         {
                             byte[] thumbnailBytes;
 
+                            Log.Info("UploadImage: ThumbUrl: "+ thumbUrl);
+
                             using (var client = new HttpClient())
                             {
                                 var response = client.GetAsync(thumbUrl).Result;
