@@ -105,28 +105,35 @@ VALUES
 
                 if (this.EbConnectionFactory.ImageManipulate != null && request.Byte.Length > 307200)
                 {
-                    int qlty = (int)(20480000 / request.Byte.Length);
-
-                    qlty = qlty < 10 ? 10 : qlty;
-
-                    string Clodinaryurl = this.EbConnectionFactory.ImageManipulate.Resize
-                                                        (request.Byte, request.ImageRefId.ToString(), qlty);
-
-
-                    if (!string.IsNullOrEmpty(Clodinaryurl))
+                    try
                     {
-                        using (var client = new HttpClient())
+                        int qlty = (int)(20480000 / request.Byte.Length);
+
+                        qlty = qlty < 10 ? 10 : qlty;
+
+                        string Clodinaryurl = this.EbConnectionFactory.ImageManipulate.Resize
+                                                            (request.Byte, request.ImageRefId.ToString(), qlty);
+
+
+                        if (!string.IsNullOrEmpty(Clodinaryurl))
                         {
-                            var response = client.GetAsync(Clodinaryurl).Result;
-
-                            if (response.IsSuccessStatusCode)
+                            using (var client = new HttpClient())
                             {
-                                var responseContent = response.Content;
+                                var response = client.GetAsync(Clodinaryurl).Result;
 
-                                request.ImgManpSerConId = this.EbConnectionFactory.ImageManipulate.InfraConId;
-                                request.Byte = responseContent.ReadAsByteArrayAsync().Result;
+                                if (response.IsSuccessStatusCode)
+                                {
+                                    var responseContent = response.Content;
+
+                                    request.ImgManpSerConId = this.EbConnectionFactory.ImageManipulate.InfraConId;
+                                    request.Byte = responseContent.ReadAsByteArrayAsync().Result;
+                                }
                             }
                         }
+                    }
+                    catch (Exception e)
+                    {
+
                     }
                 }
 
