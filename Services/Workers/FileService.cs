@@ -224,14 +224,10 @@ VALUES
             {
                 this.EbConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
 
-                if (this.EbConnectionFactory.ImageManipulate != null && request.Byte.Length > 307200)
+                if (this.EbConnectionFactory.ImageManipulate != null)
                 {
-                    int qlty = (int)(20480000 / request.Byte.Length);
-
-                    qlty = qlty < 7 ? 7 : qlty;
-
-                    string Clodinaryurl = this.EbConnectionFactory.ImageManipulate.Resize
-                                                        (request.Byte, request.ImageRefId.ToString(), qlty);
+                    string Clodinaryurl = this.EbConnectionFactory.ImageManipulate.GetImgSize
+                                                        (request.Byte, request.ImageRefId.ToString(), ImageQuality.small);
 
 
                     if (!string.IsNullOrEmpty(Clodinaryurl))
