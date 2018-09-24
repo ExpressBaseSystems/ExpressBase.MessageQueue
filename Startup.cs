@@ -125,11 +125,7 @@ namespace ExpressBase.MessageQueue
             mqServer.RegisterHandler<UploadImageRequest>(base.ExecuteMessage);
             mqServer.RegisterHandler<UploadDpRequest>(base.ExecuteMessage);
 
-            mqServer.RegisterHandler<GetImageFtpRequest>(base.ExecuteMessage, 3);
-
-
-           // mqServer.RegisterHandler<ExportApplicationRequest1>(base.ExecuteMessage);
-         //   mqServer.RegisterHandler<ImportApplicationRequest1>(base.ExecuteMessage);
+            //mqServer.RegisterHandler<GetImageFtpRequest>(base.ExecuteMessage, 3);
 
             //mqServer.RegisterHandler<EmailServicesMqRequest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<SMSSentMqRequest>(base.ExecuteMessage);
