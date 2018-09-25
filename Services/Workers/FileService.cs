@@ -36,6 +36,14 @@ namespace ExpressBase.MessageQueue.MQServices
                 (:refid, :filestoreid, :length, :imagequality_id, :is_image, :imgmanpserid, :filedb_con_id) RETURNING id;
             UPDATE eb_users SET dprefid = :refid WHERE id=:userid";
 
+        private const string _logoUpdateSql = @"
+            INSERT INTO
+                eb_files_ref_variations 
+                (eb_files_ref_id, filestore_sid, length, imagequality_id, is_image, img_manp_ser_con_id, filedb_con_id)
+            VALUES 
+                (:refid, :filestoreid, :length, :imagequality_id, :is_image, :imgmanpserid, :filedb_con_id) RETURNING id;
+            UPDATE eb_solutions SET logorefid = :refid WHERE isolution_id = :solnid;";
+
         public EbMqResponse Post(UploadFileRequest request)
         {
             Log.Info("Inside Upload Img MQ Service");
@@ -295,6 +303,85 @@ VALUES
             return new EbMqResponse { Result = true };
         }
 
+        public EbMqResponse Post(UploadLogoRequest request)
+        {
+            this.ServerEventClient.BearerToken = request.BToken;
+            this.ServerEventClient.RefreshToken = request.RToken;
+            this.ServerEventClient.RefreshTokenUri = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_GET_ACCESS_TOKEN_URL);
+
+            try
+            {
+                this.EbConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
+
+                if (this.EbConnectionFactory.ImageManipulate != null && request.Byte.Length > 307200)
+                {
+                    int qlty = (int)(20480000 / request.Byte.Length);
+
+                    qlty = qlty < 7 ? 7 : qlty;
+
+                    string Clodinaryurl = this.EbConnectionFactory.ImageManipulate.Resize
+                                                        (request.Byte, request.ImageRefId.ToString(), qlty);
+
+                    if (!string.IsNullOrEmpty(Clodinaryurl))
+                    {
+                        using (var client = new HttpClient())
+                        {
+                            var response = client.GetAsync(Clodinaryurl).Result;
+
+                            if (response.IsSuccessStatusCode)
+                            {
+                                var responseContent = response.Content;
+
+                                request.ImgManpSerConId = this.EbConnectionFactory.ImageManipulate.InfraConId;
+                                request.Byte = responseContent.ReadAsByteArrayAsync().Result;
+                            }
+                        }
+                    }
+                }
+
+                string filestore_sid = this.InfraConnectionFactory.FilesDB.UploadFile(request.ImageRefId.ToString(), request.Byte, request.FileCategory);
+
+
+                DbParameter[] parameters =
+                {
+                        this.InfraConnectionFactory.DataDB.GetNewParameter("refid", EbDbTypes.Int32, request.ImageRefId),
+                        this.InfraConnectionFactory.DataDB.GetNewParameter("filestoreid", EbDbTypes.String, filestore_sid),
+                        this.InfraConnectionFactory.DataDB.GetNewParameter("length", EbDbTypes.Int64, request.Byte.Length),
+                        this.InfraConnectionFactory.DataDB.GetNewParameter("imagequality_id", EbDbTypes.Int32, (int)request.ImgQuality),
+                        this.InfraConnectionFactory.DataDB.GetNewParameter("filedb_con_id", EbDbTypes.Int32, this.EbConnectionFactory.FilesDB.InfraConId),
+                        this.InfraConnectionFactory.DataDB.GetNewParameter("imgmanpserid", EbDbTypes.Int32, request.ImgManpSerConId),
+                        this.InfraConnectionFactory.DataDB.GetNewParameter("is_image", EbDbTypes.Boolean, 'T'),
+                        this.InfraConnectionFactory.DataDB.GetNewParameter("solnid", EbDbTypes.String, request.SolnId)
+                };
+
+                var iCount = this.InfraConnectionFactory.DataDB.DoQuery(_logoUpdateSql, parameters);
+
+                if (iCount.Rows.Capacity > 0)
+                {
+                    this.ServerEventClient.Post<NotifyResponse>(new NotifyUserIdRequest
+                    {
+                        Msg = request.ImageRefId,
+                        Selector = StaticFileConstants.UPLOADSUCCESS,
+                        ToUserAuthId = request.UserAuthId,
+                    });
+                }
+            }
+            catch (Exception e)
+            {
+                if (request.ImgQuality == ImageQuality.original)
+                {
+                    this.ServerEventClient.Post<NotifyResponse>(new NotifyUserIdRequest
+                    {
+                        Msg = request.ImageRefId,
+                        Selector = StaticFileConstants.UPLOADFAILURE,
+                        ToUserAuthId = request.UserAuthId,
+                    });
+                }
+                Log.Error("UploadImage:" + e.ToString());
+                return new EbMqResponse();
+            }
+            return new EbMqResponse { Result = true };
+        }
     }
 
     [Restrict(InternalOnly = true)]
