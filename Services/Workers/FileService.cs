@@ -339,33 +339,31 @@ VALUES
 
             try
             {
-                this.EbConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
+                //if (this.EbConnectionFactory.ImageManipulate != null && request.Byte.Length > 307200)
+                //{
+                //    int qlty = (int)(20480000 / request.Byte.Length);
 
-                if (this.EbConnectionFactory.ImageManipulate != null && request.Byte.Length > 307200)
-                {
-                    int qlty = (int)(20480000 / request.Byte.Length);
+                //    qlty = qlty < 7 ? 7 : qlty;
 
-                    qlty = qlty < 7 ? 7 : qlty;
+                //    string Clodinaryurl = this.EbConnectionFactory.ImageManipulate.Resize
+                //                                        (request.Byte, request.ImageRefId.ToString(), qlty);
 
-                    string Clodinaryurl = this.EbConnectionFactory.ImageManipulate.Resize
-                                                        (request.Byte, request.ImageRefId.ToString(), qlty);
+                //    if (!string.IsNullOrEmpty(Clodinaryurl))
+                //    {
+                //        using (var client = new HttpClient())
+                //        {
+                //            var response = client.GetAsync(Clodinaryurl).Result;
 
-                    if (!string.IsNullOrEmpty(Clodinaryurl))
-                    {
-                        using (var client = new HttpClient())
-                        {
-                            var response = client.GetAsync(Clodinaryurl).Result;
+                //            if (response.IsSuccessStatusCode)
+                //            {
+                //                var responseContent = response.Content;
 
-                            if (response.IsSuccessStatusCode)
-                            {
-                                var responseContent = response.Content;
-
-                                request.ImgManpSerConId = this.EbConnectionFactory.ImageManipulate.InfraConId;
-                                request.Byte = responseContent.ReadAsByteArrayAsync().Result;
-                            }
-                        }
-                    }
-                }
+                //                request.ImgManpSerConId = this.EbConnectionFactory.ImageManipulate.InfraConId;
+                //                request.Byte = responseContent.ReadAsByteArrayAsync().Result;
+                //            }
+                //        }
+                //    }
+                //}
 
                 string filestore_sid = this.InfraConnectionFactory.FilesDB.UploadFile(request.ImageRefId.ToString(), request.Byte, request.FileCategory);
 
@@ -376,10 +374,10 @@ VALUES
                         this.InfraConnectionFactory.DataDB.GetNewParameter("filestoreid", EbDbTypes.String, filestore_sid),
                         this.InfraConnectionFactory.DataDB.GetNewParameter("length", EbDbTypes.Int64, request.Byte.Length),
                         this.InfraConnectionFactory.DataDB.GetNewParameter("imagequality_id", EbDbTypes.Int32, (int)request.ImgQuality),
-                        this.InfraConnectionFactory.DataDB.GetNewParameter("filedb_con_id", EbDbTypes.Int32, this.EbConnectionFactory.FilesDB.InfraConId),
+                        this.InfraConnectionFactory.DataDB.GetNewParameter("filedb_con_id", EbDbTypes.Int32, 0),
                         this.InfraConnectionFactory.DataDB.GetNewParameter("imgmanpserid", EbDbTypes.Int32, request.ImgManpSerConId),
                         this.InfraConnectionFactory.DataDB.GetNewParameter("is_image", EbDbTypes.Boolean, 'T'),
-                        this.InfraConnectionFactory.DataDB.GetNewParameter("solnid", EbDbTypes.String, request.SolnId)
+                        this.InfraConnectionFactory.DataDB.GetNewParameter("solnid", EbDbTypes.String, request.SolutionId)
                 };
 
                 var iCount = this.InfraConnectionFactory.DataDB.DoQuery(_logoUpdateSql, parameters);
