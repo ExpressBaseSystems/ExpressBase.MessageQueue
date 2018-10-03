@@ -17,34 +17,34 @@ namespace ExpressBase.MessageQueue.MQServices
 
         public string Post(SMSSentMqRequest req)
         {
-            EbConnectionFactory dbFactory = new EbConnectionFactory(req.SolnId, this.Redis);
+            this.EbConnectionFactory = new EbConnectionFactory(req.SolnId, this.Redis);
 
-            var MsgStatus = dbFactory.SMSConnection.SendSMS(req.To, req.From, req.Body);
+            var MsgStatus = this.EbConnectionFactory.SMSConnection.SendSMS(req.To, req.From, req.Body);
 
-            SMSStatusLogMqRequest logMqRequest = new SMSStatusLogMqRequest();
-            logMqRequest.SMSSentStatus = new SMSSentStatus();
+            //SMSStatusLogMqRequest logMqRequest = new SMSStatusLogMqRequest
+            //{ SMSSentStatus = new SMSSentStatus()};
 
-            foreach (var Info in MsgStatus)
-            {
-                if (Info.Key == "To")
-                    logMqRequest.SMSSentStatus.To = Info.Value;
-                if (Info.Key == "From")
-                    logMqRequest.SMSSentStatus.From = Info.Value;
-                if (Info.Key == "Uri")
-                    logMqRequest.SMSSentStatus.Uri = Info.Value;
-                if (Info.Key == "Body")
-                    logMqRequest.SMSSentStatus.Body = Info.Value;
-                if (Info.Key == "Status")
-                    logMqRequest.SMSSentStatus.Status = Info.Value;
-                if (Info.Key == "SentTime")
-                    //logMqRequest.SMSSentStatus.SentTime = DateTime.Parse(Info.Value);
-                    if (Info.Key == "ErrorMessage")
-                        logMqRequest.SMSSentStatus.ErrorMessage = Info.Value;
-            }
-            logMqRequest.UserId = req.UserId;
-            logMqRequest.SolnId = req.SolnId;
+            //foreach (var Info in MsgStatus)
+            //{
+            //    if (Info.Key == "To")
+            //        logMqRequest.SMSSentStatus.To = Info.Value;
+            //    if (Info.Key == "From")
+            //        logMqRequest.SMSSentStatus.From = Info.Value;
+            //    if (Info.Key == "Uri")
+            //        logMqRequest.SMSSentStatus.Uri = Info.Value;
+            //    if (Info.Key == "Body")
+            //        logMqRequest.SMSSentStatus.Body = Info.Value;
+            //    if (Info.Key == "Status")
+            //        logMqRequest.SMSSentStatus.Status = Info.Value;
+            //    if (Info.Key == "SentTime")
+            //        //logMqRequest.SMSSentStatus.SentTime = DateTime.Parse(Info.Value);
+            //        if (Info.Key == "ErrorMessage")
+            //            logMqRequest.SMSSentStatus.ErrorMessage = Info.Value;
+            //}
+            //logMqRequest.UserId = req.UserId;
+            //logMqRequest.SolnId = req.SolnId;
 
-            this.MessageProducer3.Publish(logMqRequest);
+           // this.MessageProducer3.Publish(logMqRequest);
             return null;
         }
 
