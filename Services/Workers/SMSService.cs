@@ -19,7 +19,7 @@ namespace ExpressBase.MessageQueue.MQServices
         {
             this.EbConnectionFactory = new EbConnectionFactory(req.SolnId, this.Redis);
 
-            var MsgStatus = this.EbConnectionFactory.SMSConnection.SendSMS(req.To, req.From, req.Body);
+            var MsgStatus = this.EbConnectionFactory.SMSConnection.SendSMS(req.To, req.Body);
 
             //SMSStatusLogMqRequest logMqRequest = new SMSStatusLogMqRequest
             //{ SMSSentStatus = new SMSSentStatus()};
