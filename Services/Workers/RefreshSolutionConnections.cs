@@ -2,6 +2,7 @@
 using ExpressBase.Common.Connections;
 using ExpressBase.Common.Constants;
 using ExpressBase.Common.Data;
+using ExpressBase.Common.Messaging;
 using ExpressBase.Common.ServerEvents_Artifacts;
 using ExpressBase.Common.ServiceClients;
 using ExpressBase.MessageQueue.Services;
@@ -60,61 +61,67 @@ namespace ExpressBase.MessageQueue.MQServices
             {
                 using (var con = this.InfraConnectionFactory.DataDB.GetNewConnection() as Npgsql.NpgsqlConnection)
                 {
-
                     con.Open();
                     string sql = @"SELECT id, con_type, con_obj FROM eb_connections WHERE solution_id = @solution_id AND eb_del = 'F'";
                     DataTable dt = new DataTable();
+                    EbConnectionsConfig cons = new EbConnectionsConfig();
+
                     var ada = new Npgsql.NpgsqlDataAdapter(sql, con);
                     ada.SelectCommand.Parameters.Add(new Npgsql.NpgsqlParameter("solution_id", NpgsqlTypes.NpgsqlDbType.Text) { Value = req.SolnId });
                     ada.Fill(dt);
 
-                    EbConnectionsConfig cons = new EbConnectionsConfig();
-                    foreach (DataRow dr in dt.Rows)
+                    if (dt.Rows.Count != 0)
                     {
-                        if (dr["con_type"].ToString() == EbConnectionTypes.EbDATA.ToString())
+                        EbSmsConCollection _smscollection = new EbSmsConCollection();
+                        foreach (DataRow dr in dt.Rows)
                         {
-                            cons.DataDbConnection = EbSerializers.Json_Deserialize<EbDataDbConnection>(dr["con_obj"].ToString());
-                            cons.DataDbConnection.Id = (int)dr["id"];
+                            if (dr["con_type"].ToString() == EbConnectionTypes.EbDATA.ToString())
+                            {
+                                cons.DataDbConnection = EbSerializers.Json_Deserialize<EbDataDbConnection>(dr["con_obj"].ToString());
+                                cons.DataDbConnection.Id = (int)dr["id"];
+                            }
+                            else if (dr["con_type"].ToString() == EbConnectionTypes.EbDATA_RO.ToString())
+                            {
+                                cons.DataDbConnection = EbSerializers.Json_Deserialize<EbDataDbConnection>(dr["con_obj"].ToString());
+                                cons.DataDbConnection.Id = (int)dr["id"];
+                            }
+                            else if (dr["con_type"].ToString() == EbConnectionTypes.EbOBJECTS.ToString())
+                            {
+                                cons.ObjectsDbConnection = EbSerializers.Json_Deserialize<EbObjectsDbConnection>(dr["con_obj"].ToString());
+                                cons.ObjectsDbConnection.Id = (int)dr["id"];
+                            }
+                            //else if (dr["con_type"].ToString() == EbConnectionTypes.EbFILES.ToString())
+                            //    cons.FilesDbConnection = EbSerializers.Json_Deserialize<EbFilesDbConnection>(dr["con_obj"].ToString());
+                            else if (dr["con_type"].ToString() == EbConnectionTypes.EbLOGS.ToString())
+                            {
+                                cons.LogsDbConnection = EbSerializers.Json_Deserialize<EbLogsDbConnection>(dr["con_obj"].ToString());
+                                cons.LogsDbConnection.Id = (int)dr["id"];
+                            }
+                            else if (dr["con_type"].ToString() == EbConnectionTypes.SMTP.ToString())
+                            {
+                                cons.SMTPConnection = EbSerializers.Json_Deserialize<SMTPConnection>(dr["con_obj"].ToString());
+                                cons.SMTPConnection.Id = (int)dr["id"];
+                            }
+                            else if (dr["con_type"].ToString() == EbConnectionTypes.SMS.ToString())
+                            {
+                                ISMSConnection temp = EbSerializers.Json_Deserialize<ISMSConnection>(dr["con_obj"].ToString());
+                                temp.Id = (int)dr["id"];
+                                _smscollection.Add(temp);
+                            }
+                            else if (dr["con_type"].ToString() == EbConnectionTypes.Cloudinary.ToString())
+                            {
+                                cons.CloudinaryConnection = EbSerializers.Json_Deserialize<EbCloudinaryConnection>(dr["con_obj"].ToString());
+                                cons.CloudinaryConnection.Id = (int)dr["id"];
+                            }
+                            else if (dr["con_type"].ToString() == EbConnectionTypes.FTP.ToString())
+                            {
+                                cons.FTPConnection = EbSerializers.Json_Deserialize<EbFTPConnection>(dr["con_obj"].ToString());
+                                cons.FTPConnection.Id = (int)dr["id"];
+                            }// ... More to come
                         }
-                        else if (dr["con_type"].ToString() == EbConnectionTypes.EbDATA_RO.ToString())
-                        {
-                            cons.DataDbConnection = EbSerializers.Json_Deserialize<EbDataDbConnection>(dr["con_obj"].ToString());
-                            cons.DataDbConnection.Id = (int)dr["id"];
-                        }
-                        else if (dr["con_type"].ToString() == EbConnectionTypes.EbOBJECTS.ToString())
-                        {
-                            cons.ObjectsDbConnection = EbSerializers.Json_Deserialize<EbObjectsDbConnection>(dr["con_obj"].ToString());
-                            cons.ObjectsDbConnection.Id = (int)dr["id"];
-                        }
-                        //else if (dr["con_type"].ToString() == EbConnectionTypes.EbFILES.ToString())
-                        //    cons.FilesDbConnection = EbSerializers.Json_Deserialize<EbFilesDbConnection>(dr["con_obj"].ToString());
-                        else if (dr["con_type"].ToString() == EbConnectionTypes.EbLOGS.ToString())
-                        {
-                            cons.LogsDbConnection = EbSerializers.Json_Deserialize<EbLogsDbConnection>(dr["con_obj"].ToString());
-                            cons.LogsDbConnection.Id = (int)dr["id"];
-                        }
-                        else if (dr["con_type"].ToString() == EbConnectionTypes.SMTP.ToString())
-                        {
-                            cons.SMTPConnection = EbSerializers.Json_Deserialize<SMTPConnection>(dr["con_obj"].ToString());
-                            cons.SMTPConnection.Id = (int)dr["id"];
-                        }
-                        else if (dr["con_type"].ToString() == EbConnectionTypes.SMS.ToString())
-                        {
-                            cons.SMSConnection = EbSerializers.Json_Deserialize<SMSConnection>(dr["con_obj"].ToString());
-                            cons.SMSConnection.Id = (int)dr["id"];
-                        }
-                        else if (dr["con_type"].ToString() == EbConnectionTypes.Cloudinary.ToString())
-                        {
-                            cons.CloudinaryConnection = EbSerializers.Json_Deserialize<EbCloudinaryConnection>(dr["con_obj"].ToString());
-                            cons.CloudinaryConnection.Id = (int)dr["id"];
-                        }
-                        else if (dr["con_type"].ToString() == EbConnectionTypes.FTP.ToString())
-                        {
-                            cons.FTPConnection = EbSerializers.Json_Deserialize<EbFTPConnection>(dr["con_obj"].ToString());
-                            cons.FTPConnection.Id = (int)dr["id"];
-                        }// ... More to come
+                        cons.SMSConnections = _smscollection;
+                        Redis.Set<EbConnectionsConfig>(string.Format(CoreConstants.SOLUTION_CONNECTION_REDIS_KEY, req.SolnId), cons);                       
                     }
-                    Redis.Set<EbConnectionsConfig>(string.Format(CoreConstants.SOLUTION_CONNECTION_REDIS_KEY, req.SolnId), cons);
                 }
 
 
