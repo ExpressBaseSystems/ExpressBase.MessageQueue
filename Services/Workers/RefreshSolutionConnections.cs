@@ -73,6 +73,7 @@ namespace ExpressBase.MessageQueue.MQServices
                     if (dt.Rows.Count != 0)
                     {
                         EbSmsConCollection _smscollection = new EbSmsConCollection();
+                        EbMailConCollection _mailcollection = new EbMailConCollection();
                         foreach (DataRow dr in dt.Rows)
                         {
                             if (dr["con_type"].ToString() == EbConnectionTypes.EbDATA.ToString())
@@ -99,8 +100,9 @@ namespace ExpressBase.MessageQueue.MQServices
                             }
                             else if (dr["con_type"].ToString() == EbConnectionTypes.SMTP.ToString())
                             {
-                                cons.SMTPConnection = EbSerializers.Json_Deserialize<SMTPConnection>(dr["con_obj"].ToString());
-                                cons.SMTPConnection.Id = (int)dr["id"];
+                                EbEmail temp = EbSerializers.Json_Deserialize<EbEmail>(dr["con_obj"].ToString());
+                                temp.Id = (int)dr["id"];
+                                _mailcollection.Add(temp);
                             }
                             else if (dr["con_type"].ToString() == EbConnectionTypes.SMS.ToString())
                             {
@@ -120,7 +122,8 @@ namespace ExpressBase.MessageQueue.MQServices
                             }// ... More to come
                         }
                         cons.SMSConnections = _smscollection;
-                        Redis.Set<EbConnectionsConfig>(string.Format(CoreConstants.SOLUTION_CONNECTION_REDIS_KEY, req.SolnId), cons);
+                        cons.EmailConnections = _mailcollection;
+                        Redis.Set<EbConnectionsConfig>(string.Format(CoreConstants.SOLUTION_CONNECTION_REDIS_KEY, req.SolnId), cons);                       
                     }
                 }
 
