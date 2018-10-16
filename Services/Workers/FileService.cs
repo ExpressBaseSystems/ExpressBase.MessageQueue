@@ -115,9 +115,9 @@ VALUES
                 {
                     try
                     {
-                        int qlty = (int)(20480000 / request.Byte.Length);
+                        int qlty = (int)(51200000 / request.Byte.Length);  //Avg size*100 to get the const int (this case 500kb * 100%)
 
-                        qlty = qlty < 10 ? 10 : qlty;
+                        qlty = qlty < 15 ? 15 : qlty;
 
                         string Clodinaryurl = this.EbConnectionFactory.ImageManipulate.Resize
                                                             (request.Byte, request.ImageRefId.ToString(), qlty);
