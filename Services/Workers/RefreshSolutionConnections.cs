@@ -5,7 +5,6 @@ using ExpressBase.Common.Data;
 using ExpressBase.Common.Messaging;
 using ExpressBase.Common.ServerEvents_Artifacts;
 using ExpressBase.Common.ServiceClients;
-using ExpressBase.MessageQueue.Services;
 using ExpressBase.Objects.Services;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using ServiceStack;

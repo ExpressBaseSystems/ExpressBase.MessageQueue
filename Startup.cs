@@ -125,10 +125,8 @@ namespace ExpressBase.MessageQueue
             mqServer.RegisterHandler<UploadImageRequest>(base.ExecuteMessage);
             mqServer.RegisterHandler<UploadDpRequest>(base.ExecuteMessage);
             mqServer.RegisterHandler<UploadLogoRequest>(base.ExecuteMessage);
-
             //mqServer.RegisterHandler<GetImageFtpRequest>(base.ExecuteMessage, 3);
-
-            //mqServer.RegisterHandler<EmailServicesMqRequest>(base.ExecuteMessage);
+            
             mqServer.RegisterHandler<SMSSentMqRequest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<SMSStatusLogMqRequest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<SlackPostMqRequest>(base.ExecuteMessage);
