@@ -127,7 +127,7 @@ namespace ExpressBase.MessageQueue
             mqServer.RegisterHandler<UploadLogoRequest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<GetImageFtpRequest>(base.ExecuteMessage, 3);
             
-            mqServer.RegisterHandler<SMSSentMqRequest>(base.ExecuteMessage);
+            mqServer.RegisterHandler<SMSSentRequest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<SMSStatusLogMqRequest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<SlackPostMqRequest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<SlackAuthMqRequest>(base.ExecuteMessage);

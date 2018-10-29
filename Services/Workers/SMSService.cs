@@ -15,7 +15,7 @@ namespace ExpressBase.MessageQueue.MQServices
         {
         }
 
-        public string Post(SMSSentMqRequest req)
+        public string Post(SMSSentRequest req)
         {
             this.EbConnectionFactory = new EbConnectionFactory(req.SolnId, this.Redis);
 
