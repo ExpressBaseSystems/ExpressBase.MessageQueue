@@ -19,7 +19,13 @@ namespace ExpressBase.MessageQueue.MQServices
     [Restrict(InternalOnly = true)]
     public class FileServiceInternal : EbMqBaseService
     {
-        public FileServiceInternal(IMessageProducer _mqp, IMessageQueueClient _mqc, IEbServerEventClient _sec) : base(_mqp, _mqc, _sec) { }
+        public FileServiceInternal(IMessageProducer _mqp, IMessageQueueClient _mqc, IEbServerEventClient _sec) : base(_mqp, _mqc, _sec)
+        {
+            MqResponse = new EbMqResponse()
+            {
+                ReqType = this.GetType().ToString()
+            };
+        }
 
         private const string _imgRefUpdateSql = @"
             INSERT INTO
@@ -43,6 +49,8 @@ namespace ExpressBase.MessageQueue.MQServices
             VALUES 
                 (:refid, :filestoreid, :length, :imagequality_id, :is_image, :imgmanpserid, :filedb_con_id) RETURNING id;
             UPDATE eb_solutions SET logorefid = :refid WHERE isolution_id = :solnid;";
+
+
 
         public EbMqResponse Post(UploadFileRequest request)
         {
@@ -74,7 +82,7 @@ VALUES
 
                         _ebConnectionFactory.DataDB.GetNewParameter("filedb_con_id", EbDbTypes.Int32, _ebConnectionFactory.FilesDB.InfraConId),
 
-                        _ebConnectionFactory.DataDB.GetNewParameter("is_image",EbDbTypes.Boolean, 'F')
+                        _ebConnectionFactory.DataDB.GetNewParameter("is_image",EbDbTypes.Boolean, false)
                 };
 
                 var iCount = _ebConnectionFactory.DataDB.DoQuery(sql, parameters);
@@ -95,9 +103,10 @@ VALUES
             catch (Exception e)
             {
                 Log.Error("UploadFile:" + e.ToString());
-                return new EbMqResponse();
+                MqResponse.IsError = true;
+                MqResponse.ErrorString = e.ToString();
             }
-            return new EbMqResponse { Result = true };
+            return MqResponse;
         }
 
         public EbMqResponse Post(UploadImageRequest request)
@@ -159,7 +168,7 @@ VALUES
                         this.EbConnectionFactory.DataDB.GetNewParameter("filedb_con_id", EbDbTypes.Int32, this.EbConnectionFactory.FilesDB.InfraConId),
                         this.EbConnectionFactory.DataDB.GetNewParameter("imgmanpserid", EbDbTypes.Int32, request.ImgManpSerConId),
 
-                        this.EbConnectionFactory.DataDB.GetNewParameter("is_image", EbDbTypes.Boolean, 'T')
+                        this.EbConnectionFactory.DataDB.GetNewParameter("is_image", EbDbTypes.Boolean, true)
                 };
 
                 iCountOrg = this.EbConnectionFactory.DataDB.DoQuery(_imgRefUpdateSql, parameters);
@@ -182,7 +191,7 @@ VALUES
                         {
                             byte[] thumbnailBytes;
 
-                            Log.Info("UploadImage: ThumbUrl: "+ thumbUrl);
+                            Log.Info("UploadImage: ThumbUrl: " + thumbUrl);
 
                             using (var client = new HttpClient())
                             {
@@ -209,7 +218,7 @@ VALUES
                                                         this.EbConnectionFactory.DataDB.GetNewParameter("filedb_con_id", EbDbTypes.Int32, this.EbConnectionFactory.FilesDB.InfraConId),
                                                         this.EbConnectionFactory.DataDB.GetNewParameter("imgmanpserid", EbDbTypes.Int32, this.EbConnectionFactory.ImageManipulate.InfraConId),
 
-                                                        this.EbConnectionFactory.DataDB.GetNewParameter("is_image", EbDbTypes.Boolean, 'T')
+                                                        this.EbConnectionFactory.DataDB.GetNewParameter("is_image", EbDbTypes.Boolean, true)
                                                 };
 
                                         var iCountSmall = this.EbConnectionFactory.DataDB.DoQuery(_imgRefUpdateSql, parametersImageSmall);
@@ -231,9 +240,10 @@ VALUES
                     });
 
                 Log.Error("UploadImage:" + e.ToString());
-                return new EbMqResponse();
+                MqResponse.IsError = true;
+                MqResponse.ErrorString = e.ToString();
             }
-            return new EbMqResponse { Result = true };
+            return MqResponse;
         }
 
         public EbMqResponse Post(UploadDpRequest request)
@@ -258,7 +268,7 @@ VALUES
                         this.EbConnectionFactory.DataDB.GetNewParameter("imagequality_id", EbDbTypes.Int32, ImageQuality.original),
                         this.EbConnectionFactory.DataDB.GetNewParameter("filedb_con_id", EbDbTypes.Int32, this.EbConnectionFactory.FilesDB.InfraConId),
                         this.EbConnectionFactory.DataDB.GetNewParameter("imgmanpserid", EbDbTypes.Int32, 0),
-                        this.EbConnectionFactory.DataDB.GetNewParameter("is_image", EbDbTypes.Boolean, 'T'),
+                        this.EbConnectionFactory.DataDB.GetNewParameter("is_image", EbDbTypes.Boolean, true),
                         this.EbConnectionFactory.DataDB.GetNewParameter("userid", EbDbTypes.Int32, request.UserId)
                 };
 
@@ -302,7 +312,7 @@ VALUES
                                                         this.EbConnectionFactory.DataDB.GetNewParameter("imagequality_id", EbDbTypes.Int32, ImageQuality.small),
                                                         this.EbConnectionFactory.DataDB.GetNewParameter("filedb_con_id", EbDbTypes.Int32, this.EbConnectionFactory.FilesDB.InfraConId),
                                                         this.EbConnectionFactory.DataDB.GetNewParameter("imgmanpserid", EbDbTypes.Int32, request.ImgManpSerConId),
-                                                        this.EbConnectionFactory.DataDB.GetNewParameter("is_image", EbDbTypes.Boolean, 'T'),
+                                                        this.EbConnectionFactory.DataDB.GetNewParameter("is_image", EbDbTypes.Boolean, true),
                                                         this.EbConnectionFactory.DataDB.GetNewParameter("userid", EbDbTypes.Int32, request.UserId)
                                 };
 
@@ -326,9 +336,10 @@ VALUES
                     });
                 }
                 Log.Error("UploadImage:" + e.ToString());
-                return new EbMqResponse();
+                MqResponse.IsError = true;
+                MqResponse.ErrorString = e.ToString();
             }
-            return new EbMqResponse { Result = true };
+            return MqResponse;
         }
 
         public EbMqResponse Post(UploadLogoRequest request)
@@ -376,7 +387,7 @@ VALUES
                         this.InfraConnectionFactory.DataDB.GetNewParameter("imagequality_id", EbDbTypes.Int32, (int)request.ImgQuality),
                         this.InfraConnectionFactory.DataDB.GetNewParameter("filedb_con_id", EbDbTypes.Int32, 0),
                         this.InfraConnectionFactory.DataDB.GetNewParameter("imgmanpserid", EbDbTypes.Int32, request.ImgManpSerConId),
-                        this.InfraConnectionFactory.DataDB.GetNewParameter("is_image", EbDbTypes.Boolean, 'T'),
+                        this.InfraConnectionFactory.DataDB.GetNewParameter("is_image", EbDbTypes.Boolean, true),
                         this.InfraConnectionFactory.DataDB.GetNewParameter("solnid", EbDbTypes.String, request.SolutionId)
                 };
 
@@ -404,9 +415,10 @@ VALUES
                     });
                 }
                 Log.Error("UploadImage:" + e.ToString());
-                return new EbMqResponse();
+                MqResponse.IsError = true;
+                MqResponse.ErrorString = e.ToString();
             }
-            return new EbMqResponse { Result = true };
+            return MqResponse;
         }
     }
 
@@ -576,7 +588,7 @@ VALUES
                 Log.Error("MQ Exception: " + e.ToString());
                 return new EbMqResponse();
             }
-            return new EbMqResponse { Result = true };
+            return new EbMqResponse { IsError = false };
         }
 
         private int MapFilesWithUser(EbConnectionFactory connectionFactory, int CustomerId, int FileRefId)
