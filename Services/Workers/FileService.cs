@@ -60,7 +60,7 @@ namespace ExpressBase.MessageQueue.MQServices
             {
                 EbConnectionFactory _ebConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
 
-                string filestore_sid = _ebConnectionFactory.FilesDB.UploadFile(
+                string filestore_sid = _ebConnectionFactory.FilesDB[0].UploadFile(
                     request.FileRefId.ToString(),
                     request.Byte,
                     request.FileCategory
@@ -80,7 +80,7 @@ VALUES
 
                         _ebConnectionFactory.DataDB.GetNewParameter("length",EbDbTypes.Int64, request.Byte.Length),
 
-                        _ebConnectionFactory.DataDB.GetNewParameter("filedb_con_id", EbDbTypes.Int32, _ebConnectionFactory.FilesDB.InfraConId),
+                        _ebConnectionFactory.DataDB.GetNewParameter("filedb_con_id", EbDbTypes.Int32, _ebConnectionFactory.FilesDB[0].InfraConId),
 
                         _ebConnectionFactory.DataDB.GetNewParameter("is_image",EbDbTypes.Boolean, false)
                 };
@@ -128,7 +128,7 @@ VALUES
 
                         qlty = qlty < 15 ? 15 : qlty;
 
-                        string Clodinaryurl = this.EbConnectionFactory.ImageManipulate.Resize
+                        string Clodinaryurl = this.EbConnectionFactory.ImageManipulate[0].Resize
                                                             (request.Byte, request.ImageRefId.ToString(), qlty);
 
 
@@ -142,7 +142,7 @@ VALUES
                                 {
                                     var responseContent = response.Content;
 
-                                    request.ImgManpSerConId = this.EbConnectionFactory.ImageManipulate.InfraConId;
+                                    request.ImgManpSerConId = this.EbConnectionFactory.ImageManipulate[0].InfraConId;
                                     request.Byte = responseContent.ReadAsByteArrayAsync().Result;
                                 }
                             }
@@ -154,7 +154,7 @@ VALUES
                     }
                 }
 
-                string filestore_sid = this.EbConnectionFactory.FilesDB.UploadFile(request.ImageRefId.ToString(), request.Byte, request.FileCategory);
+                string filestore_sid = this.EbConnectionFactory.FilesDB[0].UploadFile(request.ImageRefId.ToString(), request.Byte, request.FileCategory);
 
 
                 DbParameter[] parameters =
@@ -165,7 +165,7 @@ VALUES
                         this.EbConnectionFactory.DataDB.GetNewParameter("length", EbDbTypes.Int64, request.Byte.Length),
                         this.EbConnectionFactory.DataDB.GetNewParameter("imagequality_id", EbDbTypes.Int32, (int)request.ImgQuality),
 
-                        this.EbConnectionFactory.DataDB.GetNewParameter("filedb_con_id", EbDbTypes.Int32, this.EbConnectionFactory.FilesDB.InfraConId),
+                        this.EbConnectionFactory.DataDB.GetNewParameter("filedb_con_id", EbDbTypes.Int32, this.EbConnectionFactory.FilesDB[0].InfraConId),
                         this.EbConnectionFactory.DataDB.GetNewParameter("imgmanpserid", EbDbTypes.Int32, request.ImgManpSerConId),
 
                         this.EbConnectionFactory.DataDB.GetNewParameter("is_image", EbDbTypes.Boolean, true)
@@ -182,9 +182,9 @@ VALUES
                         ToUserAuthId = request.UserAuthId,
                     });
 
-                    if (this.EbConnectionFactory.ImageManipulate.InfraConId != 0)
+                    if (this.EbConnectionFactory.ImageManipulate[0].InfraConId != 0)
                     {
-                        string thumbUrl = this.EbConnectionFactory.ImageManipulate.GetImgSize(request.Byte, request.ImageRefId.ToString(), ImageQuality.small);
+                        string thumbUrl = this.EbConnectionFactory.ImageManipulate[0].GetImgSize(request.Byte, request.ImageRefId.ToString(), ImageQuality.small);
 
                         //TO Get thumbnail
                         if (!string.IsNullOrEmpty(thumbUrl))
@@ -206,7 +206,7 @@ VALUES
 
                                     if (thumbnailBytes.Length > 0)
                                     {
-                                        filestore_sid = this.EbConnectionFactory.FilesDB.UploadFile(request.ImageRefId.ToString(), thumbnailBytes, request.FileCategory);
+                                        filestore_sid = this.EbConnectionFactory.FilesDB[0].UploadFile(request.ImageRefId.ToString(), thumbnailBytes, request.FileCategory);
                                         DbParameter[] parametersImageSmall =
                                                         {
                                                         this.EbConnectionFactory.DataDB.GetNewParameter("refid", EbDbTypes.Int32, request.ImageRefId),
@@ -215,8 +215,8 @@ VALUES
                                                         this.EbConnectionFactory.DataDB.GetNewParameter("length", EbDbTypes.Int64, thumbnailBytes.Length),
                                                         this.EbConnectionFactory.DataDB.GetNewParameter("imagequality_id", EbDbTypes.Int32, (int)ImageQuality.small),
 
-                                                        this.EbConnectionFactory.DataDB.GetNewParameter("filedb_con_id", EbDbTypes.Int32, this.EbConnectionFactory.FilesDB.InfraConId),
-                                                        this.EbConnectionFactory.DataDB.GetNewParameter("imgmanpserid", EbDbTypes.Int32, this.EbConnectionFactory.ImageManipulate.InfraConId),
+                                                        this.EbConnectionFactory.DataDB.GetNewParameter("filedb_con_id", EbDbTypes.Int32, this.EbConnectionFactory.FilesDB[0].InfraConId),
+                                                        this.EbConnectionFactory.DataDB.GetNewParameter("imgmanpserid", EbDbTypes.Int32, this.EbConnectionFactory.ImageManipulate[0].InfraConId),
 
                                                         this.EbConnectionFactory.DataDB.GetNewParameter("is_image", EbDbTypes.Boolean, true)
                                                 };
@@ -257,7 +257,7 @@ VALUES
                 this.EbConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
 
 
-                string filestore_sid = this.EbConnectionFactory.FilesDB.UploadFile(request.ImageRefId.ToString(), request.Byte, request.FileCategory);
+                string filestore_sid = this.EbConnectionFactory.FilesDB[0].UploadFile(request.ImageRefId.ToString(), request.Byte, request.FileCategory);
 
 
                 DbParameter[] parameters =
@@ -266,7 +266,7 @@ VALUES
                         this.EbConnectionFactory.DataDB.GetNewParameter("filestoreid", EbDbTypes.String, filestore_sid),
                         this.EbConnectionFactory.DataDB.GetNewParameter("length", EbDbTypes.Int64, request.Byte.Length),
                         this.EbConnectionFactory.DataDB.GetNewParameter("imagequality_id", EbDbTypes.Int32, ImageQuality.original),
-                        this.EbConnectionFactory.DataDB.GetNewParameter("filedb_con_id", EbDbTypes.Int32, this.EbConnectionFactory.FilesDB.InfraConId),
+                        this.EbConnectionFactory.DataDB.GetNewParameter("filedb_con_id", EbDbTypes.Int32, this.EbConnectionFactory.FilesDB[0].InfraConId),
                         this.EbConnectionFactory.DataDB.GetNewParameter("imgmanpserid", EbDbTypes.Int32, 0),
                         this.EbConnectionFactory.DataDB.GetNewParameter("is_image", EbDbTypes.Boolean, true),
                         this.EbConnectionFactory.DataDB.GetNewParameter("userid", EbDbTypes.Int32, request.UserId)
@@ -286,7 +286,7 @@ VALUES
 
                 if (this.EbConnectionFactory.ImageManipulate != null)
                 {
-                    string Clodinaryurl = this.EbConnectionFactory.ImageManipulate.GetImgSize
+                    string Clodinaryurl = this.EbConnectionFactory.ImageManipulate[0].GetImgSize
                                                         (request.Byte, request.ImageRefId.ToString(), ImageQuality.small);
 
 
@@ -300,9 +300,9 @@ VALUES
                             {
                                 var responseContent = response.Content;
 
-                                request.ImgManpSerConId = this.EbConnectionFactory.ImageManipulate.InfraConId;
+                                request.ImgManpSerConId = this.EbConnectionFactory.ImageManipulate[0].InfraConId;
                                 byte[] smallByte = responseContent.ReadAsByteArrayAsync().Result;
-                                string fStoreIdSmall = this.EbConnectionFactory.FilesDB.UploadFile(request.ImageRefId.ToString(), smallByte, request.FileCategory);
+                                string fStoreIdSmall = this.EbConnectionFactory.FilesDB[0].UploadFile(request.ImageRefId.ToString(), smallByte, request.FileCategory);
 
                                 DbParameter[] smallImgParams =
                                 {
@@ -310,7 +310,7 @@ VALUES
                                                         this.EbConnectionFactory.DataDB.GetNewParameter("filestoreid", EbDbTypes.String, fStoreIdSmall),
                                                         this.EbConnectionFactory.DataDB.GetNewParameter("length", EbDbTypes.Int64, request.Byte.Length),
                                                         this.EbConnectionFactory.DataDB.GetNewParameter("imagequality_id", EbDbTypes.Int32, ImageQuality.small),
-                                                        this.EbConnectionFactory.DataDB.GetNewParameter("filedb_con_id", EbDbTypes.Int32, this.EbConnectionFactory.FilesDB.InfraConId),
+                                                        this.EbConnectionFactory.DataDB.GetNewParameter("filedb_con_id", EbDbTypes.Int32, this.EbConnectionFactory.FilesDB[0].InfraConId),
                                                         this.EbConnectionFactory.DataDB.GetNewParameter("imgmanpserid", EbDbTypes.Int32, request.ImgManpSerConId),
                                                         this.EbConnectionFactory.DataDB.GetNewParameter("is_image", EbDbTypes.Boolean, true),
                                                         this.EbConnectionFactory.DataDB.GetNewParameter("userid", EbDbTypes.Int32, request.UserId)
@@ -376,7 +376,7 @@ VALUES
                 //    }
                 //}
 
-                string filestore_sid = this.InfraConnectionFactory.FilesDB.UploadFile(request.ImageRefId.ToString(), request.Byte, request.FileCategory);
+                string filestore_sid = this.InfraConnectionFactory.FilesDB[0].UploadFile(request.ImageRefId.ToString(), request.Byte, request.FileCategory);
 
 
                 DbParameter[] parameters =
@@ -494,10 +494,10 @@ VALUES
                                 qlty = qlty < 7 ? 7 : qlty;
 
                                 Log.Info("Need to Compress");
-                                string Clodinaryurl = this.EbConnectionFactory.ImageManipulate.Resize
+                                string Clodinaryurl = this.EbConnectionFactory.ImageManipulate[0].Resize
                                                     (ImageReq.Byte, ImageReq.ImageRefId.ToString(), qlty);
 
-                                ImageReq.ImgManpSerConId = this.EbConnectionFactory.ImageManipulate.InfraConId;
+                                ImageReq.ImgManpSerConId = this.EbConnectionFactory.ImageManipulate[0].InfraConId;
 
                                 using (var client = new HttpClient())
                                 {
@@ -520,7 +520,7 @@ VALUES
 
                             }
 
-                            string thumbUrl = this.EbConnectionFactory.ImageManipulate.GetImgSize(ImageReq.Byte, request.FileUrl.Value.Split('/').Last(), ImageQuality.small);
+                            string thumbUrl = this.EbConnectionFactory.ImageManipulate[0].GetImgSize(ImageReq.Byte, request.FileUrl.Value.Split('/').Last(), ImageQuality.small);
 
 
                             this.MessageProducer3.Publish(ImageReq);
@@ -550,7 +550,7 @@ VALUES
                             if (ThumbnailBytes.Length > 0)
                             {
                                 ImageReq.Byte = ThumbnailBytes;
-                                ImageReq.ImgManpSerConId = this.EbConnectionFactory.ImageManipulate.InfraConId;
+                                ImageReq.ImgManpSerConId = this.EbConnectionFactory.ImageManipulate[0].InfraConId;
                                 ImageReq.ImgQuality = ImageQuality.small;
 
                                 this.MessageProducer3.Publish(ImageReq);
