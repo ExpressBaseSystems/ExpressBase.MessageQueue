@@ -60,10 +60,11 @@ namespace ExpressBase.MessageQueue.MQServices
             {
                 EbConnectionFactory _ebConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
 
-                string filestore_sid = _ebConnectionFactory.FilesDB[0].UploadFile(
+                string filestore_sid = _ebConnectionFactory.FilesDB.UploadFile(
                     request.FileRefId.ToString(),
                     request.Byte,
-                    request.FileCategory
+                    request.FileCategory,
+                    request.InfraConID
                     );
 
                 string sql = @"
@@ -80,7 +81,7 @@ VALUES
 
                         _ebConnectionFactory.DataDB.GetNewParameter("length",EbDbTypes.Int64, request.Byte.Length),
 
-                        _ebConnectionFactory.DataDB.GetNewParameter("filedb_con_id", EbDbTypes.Int32, _ebConnectionFactory.FilesDB[0].InfraConId),
+                        _ebConnectionFactory.DataDB.GetNewParameter("filedb_con_id", EbDbTypes.Int32, _ebConnectionFactory.FilesDB.UsedConId),
 
                         _ebConnectionFactory.DataDB.GetNewParameter("is_image",EbDbTypes.Boolean, false)
                 };
@@ -154,7 +155,7 @@ VALUES
                     }
                 }
 
-                string filestore_sid = this.EbConnectionFactory.FilesDB[0].UploadFile(request.ImageRefId.ToString(), request.Byte, request.FileCategory);
+                string filestore_sid = this.EbConnectionFactory.FilesDB.UploadFile(request.ImageRefId.ToString(), request.Byte, request.FileCategory, request.InfraConID);
 
 
                 DbParameter[] parameters =
@@ -165,7 +166,7 @@ VALUES
                         this.EbConnectionFactory.DataDB.GetNewParameter("length", EbDbTypes.Int64, request.Byte.Length),
                         this.EbConnectionFactory.DataDB.GetNewParameter("imagequality_id", EbDbTypes.Int32, (int)request.ImgQuality),
 
-                        this.EbConnectionFactory.DataDB.GetNewParameter("filedb_con_id", EbDbTypes.Int32, this.EbConnectionFactory.FilesDB[0].InfraConId),
+                        this.EbConnectionFactory.DataDB.GetNewParameter("filedb_con_id", EbDbTypes.Int32,EbConnectionFactory.FilesDB.UsedConId),
                         this.EbConnectionFactory.DataDB.GetNewParameter("imgmanpserid", EbDbTypes.Int32, request.ImgManpSerConId),
 
                         this.EbConnectionFactory.DataDB.GetNewParameter("is_image", EbDbTypes.Boolean, true)
@@ -206,7 +207,7 @@ VALUES
 
                                     if (thumbnailBytes.Length > 0)
                                     {
-                                        filestore_sid = this.EbConnectionFactory.FilesDB[0].UploadFile(request.ImageRefId.ToString(), thumbnailBytes, request.FileCategory);
+                                        filestore_sid = this.EbConnectionFactory.FilesDB.UploadFile(request.ImageRefId.ToString(), thumbnailBytes, request.FileCategory, request.InfraConID);
                                         DbParameter[] parametersImageSmall =
                                                         {
                                                         this.EbConnectionFactory.DataDB.GetNewParameter("refid", EbDbTypes.Int32, request.ImageRefId),
@@ -215,7 +216,7 @@ VALUES
                                                         this.EbConnectionFactory.DataDB.GetNewParameter("length", EbDbTypes.Int64, thumbnailBytes.Length),
                                                         this.EbConnectionFactory.DataDB.GetNewParameter("imagequality_id", EbDbTypes.Int32, (int)ImageQuality.small),
 
-                                                        this.EbConnectionFactory.DataDB.GetNewParameter("filedb_con_id", EbDbTypes.Int32, this.EbConnectionFactory.FilesDB[0].InfraConId),
+                                                        this.EbConnectionFactory.DataDB.GetNewParameter("filedb_con_id", EbDbTypes.Int32,this.EbConnectionFactory.FilesDB.UsedConId),
                                                         this.EbConnectionFactory.DataDB.GetNewParameter("imgmanpserid", EbDbTypes.Int32, this.EbConnectionFactory.ImageManipulate[0].InfraConId),
 
                                                         this.EbConnectionFactory.DataDB.GetNewParameter("is_image", EbDbTypes.Boolean, true)
@@ -257,7 +258,7 @@ VALUES
                 this.EbConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
 
 
-                string filestore_sid = this.EbConnectionFactory.FilesDB[0].UploadFile(request.ImageRefId.ToString(), request.Byte, request.FileCategory);
+                string filestore_sid = this.EbConnectionFactory.FilesDB.UploadFile(request.ImageRefId.ToString(), request.Byte, request.FileCategory, request.InfraConID);
 
 
                 DbParameter[] parameters =
@@ -266,7 +267,7 @@ VALUES
                         this.EbConnectionFactory.DataDB.GetNewParameter("filestoreid", EbDbTypes.String, filestore_sid),
                         this.EbConnectionFactory.DataDB.GetNewParameter("length", EbDbTypes.Int64, request.Byte.Length),
                         this.EbConnectionFactory.DataDB.GetNewParameter("imagequality_id", EbDbTypes.Int32, ImageQuality.original),
-                        this.EbConnectionFactory.DataDB.GetNewParameter("filedb_con_id", EbDbTypes.Int32, this.EbConnectionFactory.FilesDB[0].InfraConId),
+                        this.EbConnectionFactory.DataDB.GetNewParameter("filedb_con_id", EbDbTypes.Int32, this.EbConnectionFactory.FilesDB.UsedConId),
                         this.EbConnectionFactory.DataDB.GetNewParameter("imgmanpserid", EbDbTypes.Int32, 0),
                         this.EbConnectionFactory.DataDB.GetNewParameter("is_image", EbDbTypes.Boolean, true),
                         this.EbConnectionFactory.DataDB.GetNewParameter("userid", EbDbTypes.Int32, request.UserId)
@@ -302,7 +303,7 @@ VALUES
 
                                 request.ImgManpSerConId = this.EbConnectionFactory.ImageManipulate[0].InfraConId;
                                 byte[] smallByte = responseContent.ReadAsByteArrayAsync().Result;
-                                string fStoreIdSmall = this.EbConnectionFactory.FilesDB[0].UploadFile(request.ImageRefId.ToString(), smallByte, request.FileCategory);
+                                string fStoreIdSmall = this.EbConnectionFactory.FilesDB.UploadFile(request.ImageRefId.ToString(), smallByte, request.FileCategory, request.InfraConID);
 
                                 DbParameter[] smallImgParams =
                                 {
@@ -310,7 +311,7 @@ VALUES
                                                         this.EbConnectionFactory.DataDB.GetNewParameter("filestoreid", EbDbTypes.String, fStoreIdSmall),
                                                         this.EbConnectionFactory.DataDB.GetNewParameter("length", EbDbTypes.Int64, request.Byte.Length),
                                                         this.EbConnectionFactory.DataDB.GetNewParameter("imagequality_id", EbDbTypes.Int32, ImageQuality.small),
-                                                        this.EbConnectionFactory.DataDB.GetNewParameter("filedb_con_id", EbDbTypes.Int32, this.EbConnectionFactory.FilesDB[0].InfraConId),
+                                                        this.EbConnectionFactory.DataDB.GetNewParameter("filedb_con_id", EbDbTypes.Int32,this.EbConnectionFactory.FilesDB.UsedConId),
                                                         this.EbConnectionFactory.DataDB.GetNewParameter("imgmanpserid", EbDbTypes.Int32, request.ImgManpSerConId),
                                                         this.EbConnectionFactory.DataDB.GetNewParameter("is_image", EbDbTypes.Boolean, true),
                                                         this.EbConnectionFactory.DataDB.GetNewParameter("userid", EbDbTypes.Int32, request.UserId)
@@ -376,7 +377,7 @@ VALUES
                 //    }
                 //}
 
-                string filestore_sid = this.InfraConnectionFactory.FilesDB[0].UploadFile(request.ImageRefId.ToString(), request.Byte, request.FileCategory);
+                string filestore_sid = this.InfraConnectionFactory.FilesDB.UploadFile(request.ImageRefId.ToString(), request.Byte, request.FileCategory, request.InfraConID);
 
 
                 DbParameter[] parameters =
@@ -385,7 +386,7 @@ VALUES
                         this.InfraConnectionFactory.DataDB.GetNewParameter("filestoreid", EbDbTypes.String, filestore_sid),
                         this.InfraConnectionFactory.DataDB.GetNewParameter("length", EbDbTypes.Int64, request.Byte.Length),
                         this.InfraConnectionFactory.DataDB.GetNewParameter("imagequality_id", EbDbTypes.Int32, (int)request.ImgQuality),
-                        this.InfraConnectionFactory.DataDB.GetNewParameter("filedb_con_id", EbDbTypes.Int32, 0),
+                        this.InfraConnectionFactory.DataDB.GetNewParameter("filedb_con_id", EbDbTypes.Int32, request.InfraConID),
                         this.InfraConnectionFactory.DataDB.GetNewParameter("imgmanpserid", EbDbTypes.Int32, request.ImgManpSerConId),
                         this.InfraConnectionFactory.DataDB.GetNewParameter("is_image", EbDbTypes.Boolean, true),
                         this.InfraConnectionFactory.DataDB.GetNewParameter("solnid", EbDbTypes.String, request.SolutionId)

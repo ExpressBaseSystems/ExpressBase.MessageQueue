@@ -90,8 +90,16 @@ namespace ExpressBase.MessageQueue.MQServices
                                 cons.ObjectsDbConfig = EbSerializers.Json_Deserialize<EbDbConfig>(dr["con_obj"].ToString());
                                 cons.ObjectsDbConfig.Id = (int)dr["id"];
                             }
-                            //else if (dr["con_type"].ToString() == EbConnections.EbFILES.ToString())
-                            //    cons.FilesDbConnection = EbSerializers.Json_Deserialize<EbFilesDbConnection>(dr["con_obj"].ToString());
+                            else if (dr["con_type"].ToString() == EbConnections.EbFILES.ToString())
+                            {
+                                if (cons.FilesDbConfig == null)
+                                    cons.FilesDbConfig = new FilesConfigCollection();
+                                EbIntegrationConf temp = EbSerializers.Json_Deserialize<EbIntegrationConf>(dr["con_obj"].ToString());
+                                temp.Id = (int)dr["id"];
+                                cons.FilesDbConfig.Integrations.Add(temp);
+                                if ((ConPreferences)Convert.ToInt32(dr["preference"]) == ConPreferences.PRIMARY)
+                                    cons.FilesDbConfig.DefaultConId = temp.Id;
+                            }
                             else if (dr["con_type"].ToString() == EbConnections.EbLOGS.ToString())
                             {
                                 cons.LogsDbConnection = EbSerializers.Json_Deserialize<EbDbConfig>(dr["con_obj"].ToString());
@@ -106,7 +114,7 @@ namespace ExpressBase.MessageQueue.MQServices
                                 EbSmtpConfig temp = EbSerializers.Json_Deserialize<EbSmtpConfig>(dr["con_obj"].ToString());
                                 temp.Id = (int)dr["id"];
 
-                                if ((ConPreferences)Convert.ToInt32(dr["preference"] )== ConPreferences.PRIMARY)
+                                if ((ConPreferences)Convert.ToInt32(dr["preference"]) == ConPreferences.PRIMARY)
                                     cons.EmailConfigs.Primary = temp;
                                 else if ((ConPreferences)Convert.ToInt32(dr["preference"]) == ConPreferences.FALLBACK)
                                     cons.EmailConfigs.FallBack = temp;
@@ -141,6 +149,7 @@ namespace ExpressBase.MessageQueue.MQServices
                             //    cons.FTPConnection.Id = (int)dr["id"];
                             //}// ... More to come
                         }
+
                         Redis.Set<EbConnectionsConfig>(string.Format(CoreConstants.SOLUTION_INTEGRATION_REDIS_KEY, request.SolnId), cons);
                     }
                 }
