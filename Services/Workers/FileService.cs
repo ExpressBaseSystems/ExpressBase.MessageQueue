@@ -112,13 +112,13 @@ VALUES
 
         public EbMqResponse Post(UploadImageRequest request)
         {
-            this.ServerEventClient.BearerToken = request.BToken;
-            this.ServerEventClient.RefreshToken = request.RToken;
-            this.ServerEventClient.RefreshTokenUri = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_GET_ACCESS_TOKEN_URL);
             EbDataTable iCountOrg = new EbDataTable();
-
             try
             {
+                this.ServerEventClient.BearerToken = request.BToken;
+                this.ServerEventClient.RefreshToken = request.RToken;
+                this.ServerEventClient.RefreshTokenUri = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_GET_ACCESS_TOKEN_URL);
+
                 this.EbConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
 
                 if (this.EbConnectionFactory.ImageManipulate != null && request.Byte.Length > 307200)
