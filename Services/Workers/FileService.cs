@@ -115,6 +115,9 @@ VALUES
             EbDataTable iCountOrg = new EbDataTable();
             try
             {
+	    	Log.Info("Start");
+                Log.Info("---ServerEventClient: " + this.ServerEventClient);
+                Log.Info("---ServerEventClient BToken: " + this.ServerEventClient.BearerToken);
                 this.ServerEventClient.BearerToken = request.BToken;
                 this.ServerEventClient.RefreshToken = request.RToken;
                 this.ServerEventClient.RefreshTokenUri = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_GET_ACCESS_TOKEN_URL);
