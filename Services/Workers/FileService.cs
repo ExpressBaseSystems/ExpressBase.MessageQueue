@@ -115,13 +115,17 @@ VALUES
             EbDataTable iCountOrg = new EbDataTable();
             try
             {
-	    	Log.Info("Start");
-                Log.Info("---ServerEventClient: " + this.ServerEventClient);
+                Log.Info("Start");
+                Console.ForegroundColor = ConsoleColor.DarkYellow;
+                Log.Info("\n Req Object : " + request.BToken+"\n solId : " + request.SolnId);
+                Log.Info("---ServerEventClient1 BaseUri: " + this.ServerEventClient.BaseUri);
                 Log.Info("---ServerEventClient BToken: " + this.ServerEventClient.BearerToken);
                 this.ServerEventClient.BearerToken = request.BToken;
                 this.ServerEventClient.RefreshToken = request.RToken;
                 this.ServerEventClient.RefreshTokenUri = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_GET_ACCESS_TOKEN_URL);
-
+                Log.Info("---ServerEventClient2 BaseUri: " + this.ServerEventClient.BaseUri);
+                Log.Info("---ServerEventClient BToken: " + this.ServerEventClient.BearerToken);
+                Console.ForegroundColor = ConsoleColor.White;
                 this.EbConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
 
                 if (this.EbConnectionFactory.ImageManipulate != null && request.Byte.Length > 307200)
