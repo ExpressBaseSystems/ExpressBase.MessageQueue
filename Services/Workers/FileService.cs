@@ -167,8 +167,17 @@ VALUES
 
                 Log.Info("Log 4");
                 Log.Info("FilesDb: " + this.EbConnectionFactory.FilesDB.DefaultConId);
-                string filestore_sid = this.EbConnectionFactory.FilesDB.UploadFile(request.ImageRefId.ToString(), request.Byte, request.FileCategory, request.InfraConID);
-                Log.Info("FilesDb: "+ this.EbConnectionFactory.FilesDB.UsedConId);
+                string filestore_sid = "";
+
+                try
+                {
+                    filestore_sid = this.EbConnectionFactory.FilesDB.UploadFile(request.ImageRefId.ToString(), request.Byte, request.FileCategory, request.InfraConID);
+                }
+                catch (Exception e)
+                {
+                    Log.Error("Upload Image Error" + e.Message);
+                }
+                Log.Info("FilesDb: " + this.EbConnectionFactory.FilesDB.UsedConId);
                 Log.Info("File StoreId: " + filestore_sid);
 
                 DbParameter[] parameters =
