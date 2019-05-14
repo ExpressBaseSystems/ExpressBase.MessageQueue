@@ -175,7 +175,7 @@ VALUES
                 }
                 catch (Exception e)
                 {
-                    Log.Error("Upload Image Error" + e.Message);
+                    Log.Error("Upload Image Error" + e.StackTrace);
                 }
                 Log.Info("FilesDb: " + this.EbConnectionFactory.FilesDB.UsedConId);
                 Log.Info("File StoreId: " + filestore_sid);
