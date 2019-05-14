@@ -141,7 +141,7 @@ VALUES
                         string Clodinaryurl = this.EbConnectionFactory.ImageManipulate[0].Resize
                                                             (request.Byte, request.ImageRefId.ToString(), qlty);
 
-
+                        Log.Info("Log 3.25");
                         if (!string.IsNullOrEmpty(Clodinaryurl))
                         {
                             using (var client = new HttpClient())
@@ -155,6 +155,7 @@ VALUES
                                     request.ImgManpSerConId = this.EbConnectionFactory.ImageManipulate[0].InfraConId;
                                     request.Byte = responseContent.ReadAsByteArrayAsync().Result;
                                 }
+                                Log.Info("Log 3.5");
                             }
                         }
                     }
@@ -165,9 +166,10 @@ VALUES
                 }
 
                 Log.Info("Log 4");
-
+                Log.Info("FilesDb: " + this.EbConnectionFactory.FilesDB.DefaultConId);
                 string filestore_sid = this.EbConnectionFactory.FilesDB.UploadFile(request.ImageRefId.ToString(), request.Byte, request.FileCategory, request.InfraConID);
-
+                Log.Info("FilesDb: "+ this.EbConnectionFactory.FilesDB.UsedConId);
+                Log.Info("File StoreId: " + filestore_sid);
 
                 DbParameter[] parameters =
                 {
@@ -182,6 +184,8 @@ VALUES
 
                         this.EbConnectionFactory.DataDB.GetNewParameter("is_image", EbDbTypes.Boolean, true)
                 };
+
+                Log.Info("Log 4.5");
 
                 iCountOrg = this.EbConnectionFactory.DataDB.DoQuery(_imgRefUpdateSql, parameters);
 
