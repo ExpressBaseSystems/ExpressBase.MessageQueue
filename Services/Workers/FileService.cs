@@ -247,7 +247,7 @@ VALUES
                         ToUserAuthId = request.UserAuthId,
                     });
 
-                Log.Error("UploadImage Outside:" + e.ToString());
+                Log.Error("UploadImage Outside:" + e.StackTrace + "\n" + e.SerializeToString());
                 MqResponse.IsError = true;
                 MqResponse.ErrorString = e.ToString();
             }
