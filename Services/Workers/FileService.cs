@@ -117,7 +117,8 @@ VALUES
             {
                 Log.Info("Start");
                 Console.ForegroundColor = ConsoleColor.DarkYellow;
-                Log.Info("\n Req Object : " + request.BToken+"\n solId : " + request.SolnId);
+                Log.Info("Log 1");
+                Log.Info("\n Req Object : " + request.BToken + "\n solId : " + request.SolnId);
                 Log.Info("---ServerEventClient1 BaseUri: " + this.ServerEventClient.BaseUri);
                 Log.Info("---ServerEventClient BToken: " + this.ServerEventClient.BearerToken);
                 this.ServerEventClient.BearerToken = request.BToken;
@@ -127,9 +128,10 @@ VALUES
                 Log.Info("---ServerEventClient BToken: " + this.ServerEventClient.BearerToken);
                 Console.ForegroundColor = ConsoleColor.White;
                 this.EbConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
-
+                Log.Info("Log 2");
                 if (this.EbConnectionFactory.ImageManipulate != null && request.Byte.Length > 307200)
                 {
+                    Log.Info("Log 3");
                     try
                     {
                         int qlty = (int)(51200000 / request.Byte.Length);  //Avg size*100 to get the const int (this case 500kb * 100%)
@@ -162,6 +164,8 @@ VALUES
                     }
                 }
 
+                Log.Info("Log 4");
+
                 string filestore_sid = this.EbConnectionFactory.FilesDB.UploadFile(request.ImageRefId.ToString(), request.Byte, request.FileCategory, request.InfraConID);
 
 
@@ -181,6 +185,8 @@ VALUES
 
                 iCountOrg = this.EbConnectionFactory.DataDB.DoQuery(_imgRefUpdateSql, parameters);
 
+                Log.Info("Log 5");
+
                 if (iCountOrg.Rows.Capacity > 0)
                 {
                     this.ServerEventClient.Post<NotifyResponse>(new NotifyUserIdRequest
@@ -189,6 +195,7 @@ VALUES
                         Selector = StaticFileConstants.UPLOADSUCCESS,
                         ToUserAuthId = request.UserAuthId,
                     });
+                    Log.Info("Log 6");
 
                     if (this.EbConnectionFactory.ImageManipulate[0].InfraConId != 0)
                     {
@@ -212,6 +219,9 @@ VALUES
                                     // by calling .Result you are synchronously reading the result
                                     thumbnailBytes = responseContent.ReadAsByteArrayAsync().Result;
 
+                                    Log.Info("Log 7");
+
+
                                     if (thumbnailBytes.Length > 0)
                                     {
                                         filestore_sid = this.EbConnectionFactory.FilesDB.UploadFile(request.ImageRefId.ToString(), thumbnailBytes, request.FileCategory, request.InfraConID);
@@ -229,6 +239,8 @@ VALUES
                                                         this.EbConnectionFactory.DataDB.GetNewParameter("is_image", EbDbTypes.Boolean, true)
                                                 };
 
+                                        Log.Info("Log 8");
+
                                         var iCountSmall = this.EbConnectionFactory.DataDB.DoQuery(_imgRefUpdateSql, parametersImageSmall);
                                     }
                                 }
@@ -239,6 +251,7 @@ VALUES
             }
             catch (Exception e)
             {
+                Log.Error("UploadImage Outside:" + e.StackTrace + "\n" + e.SerializeToString());
                 if (iCountOrg.Rows.Capacity == 0)
                     this.ServerEventClient.Post<NotifyResponse>(new NotifyUserIdRequest
                     {
@@ -246,8 +259,7 @@ VALUES
                         Selector = StaticFileConstants.UPLOADFAILURE,
                         ToUserAuthId = request.UserAuthId,
                     });
-
-                Log.Error("UploadImage Outside:" + e.StackTrace + "\n" + e.SerializeToString());
+                Log.Info("Log 9");
                 MqResponse.IsError = true;
                 MqResponse.ErrorString = e.ToString();
             }
