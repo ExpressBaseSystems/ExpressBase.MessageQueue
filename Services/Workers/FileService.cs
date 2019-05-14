@@ -158,7 +158,7 @@ VALUES
                     }
                     catch (Exception e)
                     {
-                        Log.Error("UploadImage: " + e.ToString());
+                        Log.Error("UploadImage Inside: " + e.ToString());
                     }
                 }
 
@@ -247,7 +247,7 @@ VALUES
                         ToUserAuthId = request.UserAuthId,
                     });
 
-                Log.Error("UploadImage:" + e.ToString());
+                Log.Error("UploadImage Outside:" + e.ToString());
                 MqResponse.IsError = true;
                 MqResponse.ErrorString = e.ToString();
             }
