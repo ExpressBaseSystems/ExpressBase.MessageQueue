@@ -171,6 +171,7 @@ VALUES
 
                 try
                 {
+                    Log.Info("FilesDB Collection Count: "+ this.EbConnectionFactory.FilesDB.Count);
                     filestore_sid = this.EbConnectionFactory.FilesDB.UploadFile(request.ImageRefId.ToString(), request.Byte, request.FileCategory, request.InfraConID);
                 }
                 catch (Exception e)
