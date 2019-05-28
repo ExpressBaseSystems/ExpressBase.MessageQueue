@@ -64,7 +64,7 @@ namespace ExpressBase.MessageQueue.MQServices
             {
                 try
                 {
-                    string sql = "UPDATE eb_users SET slackjson = @slackjson WHERE id = @id RETURNING id";
+                    string sql = "UPDATE eb_users SET slackjson = @slackjson WHERE id = @id";
 
                     var id = dbFactory.DataDB.DoQuery<Int32>(sql, new DbParameter[] {
                             dbFactory.DataDB.GetNewParameter("slackjson", EbDbTypes.Json,EbSerializers.Json_Serialize(req.SlackJson)),

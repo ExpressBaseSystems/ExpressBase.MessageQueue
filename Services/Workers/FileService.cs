@@ -27,31 +27,6 @@ namespace ExpressBase.MessageQueue.MQServices
             };
         }
 
-        private const string _imgRefUpdateSql = @"
-            INSERT INTO
-                eb_files_ref_variations 
-                (eb_files_ref_id, filestore_sid, length, imagequality_id, is_image, img_manp_ser_con_id, filedb_con_id)
-            VALUES 
-                (:refid, :filestoreid, :length, :imagequality_id, :is_image, :imgmanpserid, :filedb_con_id) RETURNING id";
-
-        private const string _dpUpdateSql = @"
-            INSERT INTO
-                eb_files_ref_variations 
-                (eb_files_ref_id, filestore_sid, length, imagequality_id, is_image, img_manp_ser_con_id, filedb_con_id)
-            VALUES 
-                (:refid, :filestoreid, :length, :imagequality_id, :is_image, :imgmanpserid, :filedb_con_id) RETURNING id;
-            UPDATE eb_users SET dprefid = :refid WHERE id=:userid";
-
-        private const string _logoUpdateSql = @"
-            INSERT INTO
-                eb_files_ref_variations 
-                (eb_files_ref_id, filestore_sid, length, imagequality_id, is_image, img_manp_ser_con_id, filedb_con_id)
-            VALUES 
-                (:refid, :filestoreid, :length, :imagequality_id, :is_image, :imgmanpserid, :filedb_con_id) RETURNING id;
-            UPDATE eb_solutions SET logorefid = :refid WHERE isolution_id = :solnid;";
-
-
-
         public EbMqResponse Post(UploadFileRequest request)
         {
             Log.Info("Inside Upload Img MQ Service");
@@ -67,12 +42,7 @@ namespace ExpressBase.MessageQueue.MQServices
                     request.InfraConID
                     );
 
-                string sql = @"
-INSERT INTO
-    eb_files_ref_variations 
-    (eb_files_ref_id, filestore_sid, length, is_image, filedb_con_id)
-VALUES 
-    (:refid, :filestoresid, :length, :is_image, :filedb_con_id) RETURNING id";
+                string sql = EbConnectionFactory.DataDB.Eb_MQ_UPLOADFILE;
 
                 DbParameter[] parameters =
                 {
@@ -83,7 +53,7 @@ VALUES
 
                         _ebConnectionFactory.DataDB.GetNewParameter("filedb_con_id", EbDbTypes.Int32, _ebConnectionFactory.FilesDB.UsedConId),
 
-                        _ebConnectionFactory.DataDB.GetNewParameter("is_image",EbDbTypes.Boolean, false)
+                        _ebConnectionFactory.DataDB.GetNewParameter("is_image",EbDbTypes.Boolean, 'F')
                 };
 
                 var iCount = _ebConnectionFactory.DataDB.DoQuery(sql, parameters);
@@ -171,7 +141,7 @@ VALUES
 
                 try
                 {
-                    Log.Info("FilesDB Collection Count: "+ this.EbConnectionFactory.FilesDB.Count);
+                    Log.Info("FilesDB Collection Count: " + this.EbConnectionFactory.FilesDB.Count);
                     filestore_sid = this.EbConnectionFactory.FilesDB.UploadFile(request.ImageRefId.ToString(), request.Byte, request.FileCategory, request.InfraConID);
                 }
                 catch (Exception e)
@@ -192,12 +162,12 @@ VALUES
                         this.EbConnectionFactory.DataDB.GetNewParameter("filedb_con_id", EbDbTypes.Int32,EbConnectionFactory.FilesDB.UsedConId),
                         this.EbConnectionFactory.DataDB.GetNewParameter("imgmanpserid", EbDbTypes.Int32, request.ImgManpSerConId),
 
-                        this.EbConnectionFactory.DataDB.GetNewParameter("is_image", EbDbTypes.Boolean, true)
+                        this.EbConnectionFactory.DataDB.GetNewParameter("is_image", EbDbTypes.Boolean, 'T')
                 };
 
                 Log.Info("Log 4.5");
 
-                iCountOrg = this.EbConnectionFactory.DataDB.DoQuery(_imgRefUpdateSql, parameters);
+                iCountOrg = this.EbConnectionFactory.DataDB.DoQuery(EbConnectionFactory.DataDB.EB_IMGREFUPDATESQL, parameters);
 
                 Log.Info("Log 5");
 
@@ -211,7 +181,7 @@ VALUES
                     });
                     Log.Info("Log 6");
 
-                    if (this.EbConnectionFactory.ImageManipulate[0].InfraConId != 0)
+                    if (this.EbConnectionFactory.ImageManipulate != null && this.EbConnectionFactory.ImageManipulate[0].InfraConId != 0)
                     {
                         string thumbUrl = this.EbConnectionFactory.ImageManipulate[0].GetImgSize(request.Byte, request.ImageRefId.ToString(), ImageQuality.small);
 
@@ -250,12 +220,12 @@ VALUES
                                                         this.EbConnectionFactory.DataDB.GetNewParameter("filedb_con_id", EbDbTypes.Int32,this.EbConnectionFactory.FilesDB.UsedConId),
                                                         this.EbConnectionFactory.DataDB.GetNewParameter("imgmanpserid", EbDbTypes.Int32, this.EbConnectionFactory.ImageManipulate[0].InfraConId),
 
-                                                        this.EbConnectionFactory.DataDB.GetNewParameter("is_image", EbDbTypes.Boolean, true)
+                                                        this.EbConnectionFactory.DataDB.GetNewParameter("is_image", EbDbTypes.Boolean, 'T')
                                                 };
 
                                         Log.Info("Log 8");
 
-                                        var iCountSmall = this.EbConnectionFactory.DataDB.DoQuery(_imgRefUpdateSql, parametersImageSmall);
+                                        var iCountSmall = this.EbConnectionFactory.DataDB.DoQuery(EbConnectionFactory.DataDB.EB_IMGREFUPDATESQL, parametersImageSmall);
                                     }
                                 }
                             }
@@ -290,9 +260,7 @@ VALUES
             {
                 this.EbConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
 
-
                 string filestore_sid = this.EbConnectionFactory.FilesDB.UploadFile(request.ImageRefId.ToString(), request.Byte, request.FileCategory, request.InfraConID);
-
 
                 DbParameter[] parameters =
                 {
@@ -306,7 +274,7 @@ VALUES
                         this.EbConnectionFactory.DataDB.GetNewParameter("userid", EbDbTypes.Int32, request.UserId)
                 };
 
-                var iCount = this.EbConnectionFactory.DataDB.DoQuery(_dpUpdateSql, parameters);
+                var iCount = this.EbConnectionFactory.DataDB.DoQuery(EbConnectionFactory.DataDB.EB_DPUPDATESQL, parameters);
 
                 if (iCount.Rows.Capacity > 0)
                 {
@@ -346,12 +314,11 @@ VALUES
                                                         this.EbConnectionFactory.DataDB.GetNewParameter("imagequality_id", EbDbTypes.Int32, ImageQuality.small),
                                                         this.EbConnectionFactory.DataDB.GetNewParameter("filedb_con_id", EbDbTypes.Int32,this.EbConnectionFactory.FilesDB.UsedConId),
                                                         this.EbConnectionFactory.DataDB.GetNewParameter("imgmanpserid", EbDbTypes.Int32, request.ImgManpSerConId),
-                                                        this.EbConnectionFactory.DataDB.GetNewParameter("is_image", EbDbTypes.Boolean, true),
+                                                        this.EbConnectionFactory.DataDB.GetNewParameter("is_image", EbDbTypes.Boolean, 'T'),
                                                         this.EbConnectionFactory.DataDB.GetNewParameter("userid", EbDbTypes.Int32, request.UserId)
                                 };
 
-                                var iSmallCount = this.EbConnectionFactory.DataDB.DoQuery(_dpUpdateSql, smallImgParams);
-
+                                var iSmallCount = this.EbConnectionFactory.DataDB.DoQuery(EbConnectionFactory.DataDB.EB_DPUPDATESQL, smallImgParams);
                             }
                         }
                     }
@@ -425,7 +392,7 @@ VALUES
                         this.InfraConnectionFactory.DataDB.GetNewParameter("solnid", EbDbTypes.String, request.SolutionId)
                 };
 
-                var iCount = this.InfraConnectionFactory.DataDB.DoQuery(_logoUpdateSql, parameters);
+                var iCount = this.InfraConnectionFactory.DataDB.DoQuery(EbConnectionFactory.DataDB.EB_LOGOUPDATESQL, parameters);
 
                 if (iCount.Rows.Capacity > 0)
                 {
@@ -461,260 +428,249 @@ VALUES
     {
         public CloudinaryInternal(IMessageProducer _mqp, IMessageQueueClient _mqc) : base(_mqp, _mqc) { }
 
-        public EbMqResponse Post(GetImageFtpRequest request)
-        {
-            try
-            {
-                this.EbConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
+        //public EbMqResponse Post(GetImageFtpRequest request)
+        //{
+        //    try
+        //    {
+        //        this.EbConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
 
-                long size = this.EbConnectionFactory.FTP.GetFileSize(request.FileUrl.Value);
-
-
-                if (size > 0)
-                {
-                    int id = FileExists(this.EbConnectionFactory.DataDB, fname: request.FileUrl.Value.SplitOnLast('/').Last(), CustomerId: request.FileUrl.Key, IsExist: 1);
-                    if (id > 0)
-                        Log.Info("Counter Updated (File Exists)");
-                    else
-                        Log.Info("Counter Not Updated (File Exists)");
+        //        long size = this.EbConnectionFactory.FTP.GetFileSize(request.FileUrl.Value);
 
 
-                    byte[] _byte = this.EbConnectionFactory.FTP.Download(request.FileUrl.Value);
-
-                    if (_byte.Length > 0)
-                    {
-                        if (UpdateCounter(this.EbConnectionFactory.DataDB, id: id, IsFtp: 1))
-                            Log.Info("Counter Updated (Byte Received)");
-                        else
-                            Log.Info("Counter Not Updated (Byte Received)");
-
-
-                        UploadImageRequest ImageReq = new UploadImageRequest()
-                        {
-                            ImgQuality = ImageQuality.original,
-                            FileCategory = EbFileCategory.Images,
-
-                            Byte = _byte,
-
-                            UserId = request.UserId,
-                            SolnId = request.SolnId,
-
-                            BToken = request.BToken,
-                            RToken = request.RToken
-                        };
-
-                        ImageReq.ImageRefId = GetFileRefId(this.EbConnectionFactory.DataDB, request.UserId, request.FileUrl.Value.Split('/').Last(), request.FileUrl.Value.Split('.').Last(), String.Format(@"CustomerId: {0}", request.FileUrl.Key.ToString()), EbFileCategory.Images);
-
-                        Console.WriteLine(@"File Recieved) ");
-
-                        object _imgenum = null;
-
-                        bool isImage = (Enum.TryParse(typeof(ImageTypes), request.FileUrl.Value.Split('.').Last().ToLower(), out _imgenum));
-
-                        if (MapFilesWithUser(this.EbConnectionFactory, request.FileUrl.Key, ImageReq.ImageRefId) < 1)
-                            throw new Exception("File Mapping Failed");
-
-                        if (isImage)
-                        {
-                            byte[] ThumbnailBytes;
-
-                            if (UpdateCounter(this.EbConnectionFactory.DataDB, id: id, IsImg: 1))
-                                Log.Info("Counter Updated (IsImage)");
-
-                            if (ImageReq.Byte.Length > 307200)
-                            {
-                                int qlty = (int)(20480000 / ImageReq.Byte.Length);
-
-                                qlty = qlty < 7 ? 7 : qlty;
-
-                                Log.Info("Need to Compress");
-                                string Clodinaryurl = this.EbConnectionFactory.ImageManipulate[0].Resize
-                                                    (ImageReq.Byte, ImageReq.ImageRefId.ToString(), qlty);
-
-                                ImageReq.ImgManpSerConId = this.EbConnectionFactory.ImageManipulate[0].InfraConId;
-
-                                using (var client = new HttpClient())
-                                {
-                                    var response = client.GetAsync(Clodinaryurl).Result;
-
-                                    if (response.IsSuccessStatusCode)
-                                    {
-                                        var responseContent = response.Content;
-
-                                        // by calling .Result you are synchronously reading the result
-                                        ImageReq.Byte = responseContent.ReadAsByteArrayAsync().Result;
-                                        if (UpdateCounter(this.EbConnectionFactory.DataDB, id: id, IsCloudLarge: 1))
-                                            Log.Info("Counter Updated (Recieved Large Image)");
-                                    }
-                                    else
-                                    {
-                                        throw new Exception("Cloudinary Error: Image Not Downloaded");
-                                    }
-                                }
-
-                            }
-
-                            string thumbUrl = this.EbConnectionFactory.ImageManipulate[0].GetImgSize(ImageReq.Byte, request.FileUrl.Value.Split('/').Last(), ImageQuality.small);
+        //        if (size > 0)
+        //        {
+        //            int id = FileExists(this.EbConnectionFactory.DataDB, fname: request.FileUrl.Value.SplitOnLast('/').Last(), CustomerId: request.FileUrl.Key, IsExist: 1);
+        //            if (id > 0)
+        //                Log.Info("Counter Updated (File Exists)");
+        //            else
+        //                Log.Info("Counter Not Updated (File Exists)");
 
 
-                            this.MessageProducer3.Publish(ImageReq);
-                            Log.Info("Pushed Image Large to Queue");
+        //            byte[] _byte = this.EbConnectionFactory.FTP.Download(request.FileUrl.Value);
+
+        //            if (_byte.Length > 0)
+        //            {
+        //                if (UpdateCounter(this.EbConnectionFactory.DataDB, id: id, IsFtp: 1))
+        //                    Log.Info("Counter Updated (Byte Received)");
+        //                else
+        //                    Log.Info("Counter Not Updated (Byte Received)");
 
 
-                            //TO Get thumbnail
-                            using (var client = new HttpClient())
-                            {
-                                var response = client.GetAsync(thumbUrl).Result;
+        //                UploadImageRequest ImageReq = new UploadImageRequest()
+        //                {
+        //                    ImgQuality = ImageQuality.original,
+        //                    FileCategory = EbFileCategory.Images,
 
-                                if (response.IsSuccessStatusCode)
-                                {
-                                    var responseContent = response.Content;
+        //                    Byte = _byte,
 
-                                    // by calling .Result you are synchronously reading the result
-                                    ThumbnailBytes = responseContent.ReadAsByteArrayAsync().Result;
-                                }
-                                else
-                                {
-                                    throw new Exception("Cloudinary Error: Transformed Image Not Available");
-                                }
+        //                    UserId = request.UserId,
+        //                    SolnId = request.SolnId,
 
-                            }
+        //                    BToken = request.BToken,
+        //                    RToken = request.RToken
+        //                };
+
+        //                ImageReq.ImageRefId = GetFileRefId(this.EbConnectionFactory.DataDB, request.UserId, request.FileUrl.Value.Split('/').Last(), request.FileUrl.Value.Split('.').Last(), String.Format(@"CustomerId: {0}", request.FileUrl.Key.ToString()), EbFileCategory.Images);
+
+        //                Console.WriteLine(@"File Recieved) ");
+
+        //                object _imgenum = null;
+
+        //                bool isImage = (Enum.TryParse(typeof(ImageTypes), request.FileUrl.Value.Split('.').Last().ToLower(), out _imgenum));
+
+        //                if (MapFilesWithUser(this.EbConnectionFactory, request.FileUrl.Key, ImageReq.ImageRefId) < 1)
+        //                    throw new Exception("File Mapping Failed");
+
+        //                if (isImage)
+        //                {
+        //                    byte[] ThumbnailBytes;
+
+        //                    if (UpdateCounter(this.EbConnectionFactory.DataDB, id: id, IsImg: 1))
+        //                        Log.Info("Counter Updated (IsImage)");
+
+        //                    if (ImageReq.Byte.Length > 307200)
+        //                    {
+        //                        int qlty = (int)(20480000 / ImageReq.Byte.Length);
+
+        //                        qlty = qlty < 7 ? 7 : qlty;
+
+        //                        Log.Info("Need to Compress");
+        //                        string Clodinaryurl = this.EbConnectionFactory.ImageManipulate[0].Resize
+        //                                            (ImageReq.Byte, ImageReq.ImageRefId.ToString(), qlty);
+
+        //                        ImageReq.ImgManpSerConId = this.EbConnectionFactory.ImageManipulate[0].InfraConId;
+
+        //                        using (var client = new HttpClient())
+        //                        {
+        //                            var response = client.GetAsync(Clodinaryurl).Result;
+
+        //                            if (response.IsSuccessStatusCode)
+        //                            {
+        //                                var responseContent = response.Content;
+
+        //                                // by calling .Result you are synchronously reading the result
+        //                                ImageReq.Byte = responseContent.ReadAsByteArrayAsync().Result;
+        //                                if (UpdateCounter(this.EbConnectionFactory.DataDB, id: id, IsCloudLarge: 1))
+        //                                    Log.Info("Counter Updated (Recieved Large Image)");
+        //                            }
+        //                            else
+        //                            {
+        //                                throw new Exception("Cloudinary Error: Image Not Downloaded");
+        //                            }
+        //                        }
+
+        //                    }
+
+        //                    string thumbUrl = this.EbConnectionFactory.ImageManipulate[0].GetImgSize(ImageReq.Byte, request.FileUrl.Value.Split('/').Last(), ImageQuality.small);
 
 
-                            if (ThumbnailBytes.Length > 0)
-                            {
-                                ImageReq.Byte = ThumbnailBytes;
-                                ImageReq.ImgManpSerConId = this.EbConnectionFactory.ImageManipulate[0].InfraConId;
-                                ImageReq.ImgQuality = ImageQuality.small;
-
-                                this.MessageProducer3.Publish(ImageReq);
-
-                                if (UpdateCounter(this.EbConnectionFactory.DataDB, id: id, IsCloudSmall: 1))
-                                    Log.Info("Counter Updated (Recieved SmallImage)");
-                                Log.Info("Pushed Small to Queue after Cloudinary");
-                            }
+        //                    this.MessageProducer3.Publish(ImageReq);
+        //                    Log.Info("Pushed Image Large to Queue");
 
 
-                        }
-                        else
-                        {
-                            this.MessageProducer3.Publish(new UploadFileRequest()
-                            {
-                                FileRefId = ImageReq.ImageRefId,
-                                FileCategory = EbFileCategory.File,
+        //                    //TO Get thumbnail
+        //                    using (var client = new HttpClient())
+        //                    {
+        //                        var response = client.GetAsync(thumbUrl).Result;
 
-                                Byte = ImageReq.Byte,
+        //                        if (response.IsSuccessStatusCode)
+        //                        {
+        //                            var responseContent = response.Content;
 
-                                UserId = request.UserId,
-                                SolnId = request.SolnId,
+        //                            // by calling .Result you are synchronously reading the result
+        //                            ThumbnailBytes = responseContent.ReadAsByteArrayAsync().Result;
+        //                        }
+        //                        else
+        //                        {
+        //                            throw new Exception("Cloudinary Error: Transformed Image Not Available");
+        //                        }
 
-                                BToken = request.BToken,
-                                RToken = request.RToken
-                            });
-                            if (UpdateCounter(this.EbConnectionFactory.DataDB, id: id, IsFile: 1))
-                                Log.Info("Counter Updated (File Pushed)");
-                        }
-                    }
-                }
-            }
-            catch (Exception e)
-            {
-                Log.Error("MQ Exception: " + e.ToString());
-                return new EbMqResponse();
-            }
-            return new EbMqResponse { IsError = false };
-        }
+        //                    }
 
-        private int MapFilesWithUser(EbConnectionFactory connectionFactory, int CustomerId, int FileRefId)
-        {
-            int res = 0;
-            string MapQuery = @"INSERT into customer_files (customer_id, eb_files_ref_id) values(@cust_id, @ref_id) returning id";
-            DbParameter[] MapParams =
-            {
-                        connectionFactory.DataDB.GetNewParameter("cust_id", EbDbTypes.Int32, CustomerId),
-                        connectionFactory.DataDB.GetNewParameter("ref_id", EbDbTypes.Int32, FileRefId)
-            };
-            var table = connectionFactory.DataDB.DoQuery(MapQuery, MapParams);
-            res = (int)table.Rows[0][0];
-            return res;
-        }
 
-        public bool UpdateCounter(IDatabase DataDB, int id, int IsFtp = 0, int IsCloudLarge = 0, int IsCloudSmall = 0, int IsFile = 0, int IsImg = 0)
-        {
-            int res = 0;
+        //                    if (ThumbnailBytes.Length > 0)
+        //                    {
+        //                        ImageReq.Byte = ThumbnailBytes;
+        //                        ImageReq.ImgManpSerConId = this.EbConnectionFactory.ImageManipulate[0].InfraConId;
+        //                        ImageReq.ImgQuality = ImageQuality.small;
 
-            try
-            {
-                string MapQuery = @"
-UPDATE 
-    eb_image_migration_counter
-SET 
-	ftp_get = eb_image_migration_counter.ftp_get + @ftp, 
-	cldnry_large = eb_image_migration_counter.cldnry_large + @cldl , 
-	cldnry_small = eb_image_migration_counter.cldnry_small + @clds, 
-	file_upld = eb_image_migration_counter.file_upld + @file, 
-	img_org = eb_image_migration_counter.img_org + @img
-WHERE eb_image_migration_counter.id = @id;";
-                DbParameter[] MapParams =
-                {
-                                DataDB.GetNewParameter("id", EbDbTypes.Int32, id),
-                                DataDB.GetNewParameter("ftp", EbDbTypes.Int32, IsFtp),
-                                DataDB.GetNewParameter("cldl", EbDbTypes.Int32, IsCloudLarge),
-                                DataDB.GetNewParameter("clds", EbDbTypes.Int32, IsCloudSmall),
-                                DataDB.GetNewParameter("file", EbDbTypes.Int32, IsFile),
-                                DataDB.GetNewParameter("img", EbDbTypes.Int32, IsImg)
-                    };
-                res = DataDB.DoNonQuery(MapQuery, MapParams);
-            }
-            catch (Exception e)
-            {
-                Log.Error("Counter: " + e.Message);
-            }
-            return (res > 0);
-        }
+        //                        this.MessageProducer3.Publish(ImageReq);
 
-        public int FileExists(IDatabase DataDB, string fname, int CustomerId, int IsExist = 0)
-        {
-            int res = 0;
+        //                        if (UpdateCounter(this.EbConnectionFactory.DataDB, id: id, IsCloudSmall: 1))
+        //                            Log.Info("Counter Updated (Recieved SmallImage)");
+        //                        Log.Info("Pushed Small to Queue after Cloudinary");
+        //                    }
 
-            try
-            {
-                string AddQuery = @"
-UPDATE  
-    eb_image_migration_counter 
-SET
-    is_exist = @exist
-WHERE
-    filename = @fname
-    AND customer_id = @cid
-RETURNING id";
-                DbParameter[] MapParams =
-                {
-                                DataDB.GetNewParameter("cid", EbDbTypes.Int32, CustomerId),
-                                DataDB.GetNewParameter("fname", EbDbTypes.String, fname),
-                                DataDB.GetNewParameter("exist", EbDbTypes.Int32, IsExist),
-                    };
-                var tab = DataDB.DoQuery(AddQuery, MapParams);
-                if (tab.Rows.Capacity > 0)
-                    res = Convert.ToInt32(tab.Rows[0][0]);
-            }
-            catch (Exception e)
-            {
-                Log.Error("Counter: " + e.Message);
-            }
-            return res;
-        }
+
+        //                }
+        //                else
+        //                {
+        //                    this.MessageProducer3.Publish(new UploadFileRequest()
+        //                    {
+        //                        FileRefId = ImageReq.ImageRefId,
+        //                        FileCategory = EbFileCategory.File,
+
+        //                        Byte = ImageReq.Byte,
+
+        //                        UserId = request.UserId,
+        //                        SolnId = request.SolnId,
+
+        //                        BToken = request.BToken,
+        //                        RToken = request.RToken
+        //                    });
+        //                    if (UpdateCounter(this.EbConnectionFactory.DataDB, id: id, IsFile: 1))
+        //                        Log.Info("Counter Updated (File Pushed)");
+        //                }
+        //            }
+        //        }
+        //    }
+        //    catch (Exception e)
+        //    {
+        //        Log.Error("MQ Exception: " + e.ToString());
+        //        return new EbMqResponse();
+        //    }
+        //    return new EbMqResponse { IsError = false };
+        //}
+
+        //private int MapFilesWithUser(EbConnectionFactory connectionFactory, int CustomerId, int FileRefId)
+        //{
+        //    int res = 0;
+        //    string MapQuery = @"INSERT into customer_files (customer_id, eb_files_ref_id) values(@cust_id, @ref_id) returning id";
+        //    DbParameter[] MapParams =
+        //    {
+        //                connectionFactory.DataDB.GetNewParameter("cust_id", EbDbTypes.Int32, CustomerId),
+        //                connectionFactory.DataDB.GetNewParameter("ref_id", EbDbTypes.Int32, FileRefId)
+        //    };
+        //    var table = connectionFactory.DataDB.DoQuery(MapQuery, MapParams);
+        //    res = (int)table.Rows[0][0];
+        //    return res;
+        //}
+
+        //public bool UpdateCounter(IDatabase DataDB, int id, int IsFtp = 0, int IsCloudLarge = 0, int IsCloudSmall = 0, int IsFile = 0, int IsImg = 0)
+        //{
+        //    int res = 0;
+
+        //    try
+        //    {
+        //        string MapQuery = @"
+        //                            UPDATE 
+        //                                eb_image_migration_counter
+        //                            SET 
+	       //                             ftp_get = eb_image_migration_counter.ftp_get + @ftp, 
+	       //                             cldnry_large = eb_image_migration_counter.cldnry_large + @cldl , 
+	       //                             cldnry_small = eb_image_migration_counter.cldnry_small + @clds, 
+	       //                             file_upld = eb_image_migration_counter.file_upld + @file, 
+	       //                             img_org = eb_image_migration_counter.img_org + @img
+        //                            WHERE 
+        //                                eb_image_migration_counter.id = @id;";
+        //        DbParameter[] MapParams =
+        //        {
+        //                        DataDB.GetNewParameter("id", EbDbTypes.Int32, id),
+        //                        DataDB.GetNewParameter("ftp", EbDbTypes.Int32, IsFtp),
+        //                        DataDB.GetNewParameter("cldl", EbDbTypes.Int32, IsCloudLarge),
+        //                        DataDB.GetNewParameter("clds", EbDbTypes.Int32, IsCloudSmall),
+        //                        DataDB.GetNewParameter("file", EbDbTypes.Int32, IsFile),
+        //                        DataDB.GetNewParameter("img", EbDbTypes.Int32, IsImg)
+        //            };
+        //        res = DataDB.DoNonQuery(MapQuery, MapParams);
+        //    }
+        //    catch (Exception e)
+        //    {
+        //        Log.Error("Counter: " + e.Message);
+        //    }
+        //    return (res > 0);
+        //}
+
+        //public int FileExists(IDatabase DataDB, string fname, int CustomerId, int IsExist = 0)
+        //{
+        //    int res = 0;
+
+        //    try
+        //    {
+        //        string AddQuery = EbConnectionFactory.DataDB.EB_FILEEXISTS;
+
+        //        DbParameter[] MapParams =
+        //        {
+        //                        DataDB.GetNewParameter("cid", EbDbTypes.Int32, CustomerId),
+        //                        DataDB.GetNewParameter("fname", EbDbTypes.String, fname),
+        //                        DataDB.GetNewParameter("exist", EbDbTypes.Int32, IsExist),
+        //            };
+        //        var tab = DataDB.DoQuery(AddQuery, MapParams);
+        //        if (tab.Rows.Capacity > 0)
+        //            res = Convert.ToInt32(tab.Rows[0][0]);
+        //    }
+        //    catch (Exception e)
+        //    {
+        //        Log.Error("Counter: " + e.Message);
+        //    }
+        //    return res;
+        //}
 
         private int GetFileRefId(IDatabase datadb, int userId, string filename, string filetype, string tags, EbFileCategory ebFileCategory)
         {
             try
             {
-                string IdFetchQuery =
-            @"INSERT INTO
-    eb_files_ref (userid, filename, filetype, tags, filecategory) 
-VALUES 
-    (@userid, @filename, @filetype, @tags, @filecategory) 
-RETURNING id";
+                string IdFetchQuery = EbConnectionFactory.DataDB.EB_GETFILEREFID;
 
                 DbParameter[] parameters =
                    {
