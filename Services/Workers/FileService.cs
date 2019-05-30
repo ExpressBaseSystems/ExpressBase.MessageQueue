@@ -53,7 +53,7 @@ namespace ExpressBase.MessageQueue.MQServices
 
                         _ebConnectionFactory.DataDB.GetNewParameter("filedb_con_id", EbDbTypes.Int32, _ebConnectionFactory.FilesDB.UsedConId),
 
-                        _ebConnectionFactory.DataDB.GetNewParameter("is_image",EbDbTypes.Boolean, 'F')
+                        _ebConnectionFactory.DataDB.GetNewParameter("is_image",EbDbTypes.Boolean, false)
                 };
 
                 var iCount = _ebConnectionFactory.DataDB.DoQuery(sql, parameters);
