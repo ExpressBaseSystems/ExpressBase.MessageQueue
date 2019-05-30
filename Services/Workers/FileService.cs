@@ -162,7 +162,7 @@ namespace ExpressBase.MessageQueue.MQServices
                         this.EbConnectionFactory.DataDB.GetNewParameter("filedb_con_id", EbDbTypes.Int32,EbConnectionFactory.FilesDB.UsedConId),
                         this.EbConnectionFactory.DataDB.GetNewParameter("imgmanpserid", EbDbTypes.Int32, request.ImgManpSerConId),
 
-                        this.EbConnectionFactory.DataDB.GetNewParameter("is_image", EbDbTypes.Boolean, 'T')
+                        this.EbConnectionFactory.DataDB.GetNewParameter("is_image", EbDbTypes.Boolean, true)
                 };
 
                 Log.Info("Log 4.5");
@@ -220,7 +220,7 @@ namespace ExpressBase.MessageQueue.MQServices
                                                         this.EbConnectionFactory.DataDB.GetNewParameter("filedb_con_id", EbDbTypes.Int32,this.EbConnectionFactory.FilesDB.UsedConId),
                                                         this.EbConnectionFactory.DataDB.GetNewParameter("imgmanpserid", EbDbTypes.Int32, this.EbConnectionFactory.ImageManipulate[0].InfraConId),
 
-                                                        this.EbConnectionFactory.DataDB.GetNewParameter("is_image", EbDbTypes.Boolean, 'T')
+                                                        this.EbConnectionFactory.DataDB.GetNewParameter("is_image", EbDbTypes.Boolean, true)
                                                 };
 
                                         Log.Info("Log 8");
@@ -312,9 +312,9 @@ namespace ExpressBase.MessageQueue.MQServices
                                                         this.EbConnectionFactory.DataDB.GetNewParameter("filestoreid", EbDbTypes.String, fStoreIdSmall),
                                                         this.EbConnectionFactory.DataDB.GetNewParameter("length", EbDbTypes.Int64, request.Byte.Length),
                                                         this.EbConnectionFactory.DataDB.GetNewParameter("imagequality_id", EbDbTypes.Int32, ImageQuality.small),
-                                                        this.EbConnectionFactory.DataDB.GetNewParameter("filedb_con_id", EbDbTypes.Int32,this.EbConnectionFactory.FilesDB.UsedConId),
+                                                        this.EbConnectionFactory.DataDB.GetNewParameter("filedb_con_id", EbDbTypes.Int32, this.EbConnectionFactory.FilesDB.UsedConId),
                                                         this.EbConnectionFactory.DataDB.GetNewParameter("imgmanpserid", EbDbTypes.Int32, request.ImgManpSerConId),
-                                                        this.EbConnectionFactory.DataDB.GetNewParameter("is_image", EbDbTypes.Boolean, 'T'),
+                                                        this.EbConnectionFactory.DataDB.GetNewParameter("is_image", EbDbTypes.Boolean, true),
                                                         this.EbConnectionFactory.DataDB.GetNewParameter("userid", EbDbTypes.Int32, request.UserId)
                                 };
 
@@ -616,11 +616,11 @@ namespace ExpressBase.MessageQueue.MQServices
         //                            UPDATE 
         //                                eb_image_migration_counter
         //                            SET 
-	       //                             ftp_get = eb_image_migration_counter.ftp_get + @ftp, 
-	       //                             cldnry_large = eb_image_migration_counter.cldnry_large + @cldl , 
-	       //                             cldnry_small = eb_image_migration_counter.cldnry_small + @clds, 
-	       //                             file_upld = eb_image_migration_counter.file_upld + @file, 
-	       //                             img_org = eb_image_migration_counter.img_org + @img
+        //                             ftp_get = eb_image_migration_counter.ftp_get + @ftp, 
+        //                             cldnry_large = eb_image_migration_counter.cldnry_large + @cldl , 
+        //                             cldnry_small = eb_image_migration_counter.cldnry_small + @clds, 
+        //                             file_upld = eb_image_migration_counter.file_upld + @file, 
+        //                             img_org = eb_image_migration_counter.img_org + @img
         //                            WHERE 
         //                                eb_image_migration_counter.id = @id;";
         //        DbParameter[] MapParams =
