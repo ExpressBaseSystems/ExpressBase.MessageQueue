@@ -42,7 +42,7 @@ namespace ExpressBase.MessageQueue.MQServices
                     request.InfraConID
                     );
 
-                string sql = EbConnectionFactory.DataDB.Eb_MQ_UPLOADFILE;
+                string sql = _ebConnectionFactory.DataDB.Eb_MQ_UPLOADFILE;
 
                 DbParameter[] parameters =
                 {
