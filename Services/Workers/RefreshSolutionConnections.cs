@@ -172,7 +172,7 @@ namespace ExpressBase.MessageQueue.MQServices
             {
                 Log.Info("Exception:" + e.ToString());
                 res = new RefreshSolutionConnectionsResponse();
-                res.ResponseStatus.Message = e.Message;
+                res.ResponseStatus = new ResponseStatus { Message = e.Message };
             }
             return res;
         }
