@@ -60,9 +60,9 @@ namespace ExpressBase.MessageQueue.MQServices
             RefreshSolutionConnectionsResponse res = null;
             try
             {
-                using (var con = this.InfraConnectionFactory.DataDB.GetNewConnection() as Npgsql.NpgsqlConnection)
+                using (DbConnection _dbconnection = this.InfraConnectionFactory.DataDB.GetNewConnection() as Npgsql.NpgsqlConnection)
                 {
-                    con.Open();
+                    _dbconnection.Open();
                     string sql = @"SELECT EI.id, EI.type as con_type, EC.con_obj, EC.type as config_type, EI.preference  FROM 
 		                            eb_integrations EI, eb_integration_configs EC 
                                     WHERE
@@ -75,7 +75,7 @@ namespace ExpressBase.MessageQueue.MQServices
                     {
                         foreach (EbDataRow dr in dt.Rows)
                         {
-                            if (dr["con_type"].ToString() == EbConnections.EbDATA.ToString())
+                            if (dr["con_type"].ToString() == EbConnectionTypes.EbDATA.ToString())
                             {
                                 cons.DataDbConfig = EbSerializers.Json_Deserialize<EbDbConfig>(dr["con_obj"].ToString());
                                 cons.DataDbConfig.Id = (int)dr["id"];
@@ -85,12 +85,12 @@ namespace ExpressBase.MessageQueue.MQServices
                             //    cons.DataDbConnection = EbSerializers.Json_Deserialize<EbDataDbConnection>(dr["con_obj"].ToString());
                             //    cons.DataDbConnection.Id = (int)dr["id"];
                             //}
-                            else if (dr["con_type"].ToString() == EbConnections.EbOBJECTS.ToString())
+                            else if (dr["con_type"].ToString() == EbConnectionTypes.EbOBJECTS.ToString())
                             {
                                 cons.ObjectsDbConfig = EbSerializers.Json_Deserialize<EbDbConfig>(dr["con_obj"].ToString());
                                 cons.ObjectsDbConfig.Id = (int)dr["id"];
                             }
-                            else if (dr["con_type"].ToString() == EbConnections.EbFILES.ToString())
+                            else if (dr["con_type"].ToString() == EbConnectionTypes.EbFILES.ToString())
                             {
                                 if (cons.FilesDbConfig == null)
                                     cons.FilesDbConfig = new FilesConfigCollection();
@@ -100,12 +100,12 @@ namespace ExpressBase.MessageQueue.MQServices
                                 if ((ConPreferences)Convert.ToInt32(dr["preference"]) == ConPreferences.PRIMARY)
                                     cons.FilesDbConfig.DefaultConId = temp.Id;
                             }
-                            else if (dr["con_type"].ToString() == EbConnections.EbLOGS.ToString())
+                            else if (dr["con_type"].ToString() == EbConnectionTypes.EbLOGS.ToString())
                             {
                                 cons.LogsDbConnection = EbSerializers.Json_Deserialize<EbDbConfig>(dr["con_obj"].ToString());
                                 cons.LogsDbConnection.Id = (int)dr["id"];
                             }
-                            else if (dr["con_type"].ToString() == EbConnections.SMTP.ToString())
+                            else if (dr["con_type"].ToString() == EbConnectionTypes.SMTP.ToString())
                             {
                                 if (cons.EmailConfigs == null)
                                 {
@@ -119,7 +119,7 @@ namespace ExpressBase.MessageQueue.MQServices
                                 else if ((ConPreferences)Convert.ToInt32(dr["preference"]) == ConPreferences.FALLBACK)
                                     cons.EmailConfigs.FallBack = temp;
                             }
-                            else if (dr["con_type"].ToString() == EbConnections.SMS.ToString())
+                            else if (dr["con_type"].ToString() == EbConnectionTypes.SMS.ToString())
                             {
                                 if (cons.SMSConfigs == null)
                                 {
@@ -133,7 +133,7 @@ namespace ExpressBase.MessageQueue.MQServices
                                 else if ((ConPreferences)Convert.ToInt32(dr["preference"]) == ConPreferences.FALLBACK)
                                     cons.SMSConfigs.FallBack = temp;
                             }
-                            else if (dr["con_type"].ToString() == EbConnections.Cloudinary.ToString())
+                            else if (dr["con_type"].ToString() == EbConnectionTypes.Cloudinary.ToString())
                             {
                                 if (cons.CloudinaryConfigs == null)
                                 {
@@ -143,6 +143,16 @@ namespace ExpressBase.MessageQueue.MQServices
                                 temp.Id = (int)dr["id"];
                                 cons.CloudinaryConfigs.Add(temp);
                             }
+                            else if (dr["con_type"].ToString() == EbConnectionTypes.MAPS.ToString())
+                            {
+                                if (cons.MapConfigs == null)
+                                    cons.MapConfigs = new MapConfigCollection();
+                                EbMapConfig temp = EbSerializers.Json_Deserialize<EbMapConfig>(dr["con_obj"].ToString());
+                                temp.Id = (int)dr["id"];
+                                cons.MapConfigs.Integrations.Add(temp);
+                                if ((ConPreferences)Convert.ToInt32(dr["preference"]) == ConPreferences.PRIMARY)
+                                    cons.MapConfigs.DefaultConId = temp.Id;
+                            }
                             //else if (dr["con_type"].ToString() == EbConnectionTypes.FTP.ToString())
                             //{
                             //    cons.FTPConnection = EbSerializers.Json_Deserialize<EbFTPConnection>(dr["con_obj"].ToString());
@@ -151,6 +161,9 @@ namespace ExpressBase.MessageQueue.MQServices
                         }
 
                         Redis.Set<EbConnectionsConfig>(string.Format(CoreConstants.SOLUTION_INTEGRATION_REDIS_KEY, request.SolnId), cons);
+                        Console.ForegroundColor = ConsoleColor.Green;
+                        Console.WriteLine(request.SolnId + " ConnectionObject Updated");
+                        Console.ForegroundColor = ConsoleColor.White;
                     }
                 }
 
