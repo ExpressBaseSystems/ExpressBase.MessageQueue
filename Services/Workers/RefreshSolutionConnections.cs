@@ -102,8 +102,8 @@ namespace ExpressBase.MessageQueue.MQServices
                             }
                             else if (dr["con_type"].ToString() == EbConnectionTypes.EbLOGS.ToString())
                             {
-                                cons.LogsDbConnection = EbSerializers.Json_Deserialize<EbDbConfig>(dr["con_obj"].ToString());
-                                cons.LogsDbConnection.Id = (int)dr["id"];
+                                cons.LogsDbConfig = EbSerializers.Json_Deserialize<EbDbConfig>(dr["con_obj"].ToString());
+                                cons.LogsDbConfig.Id = (int)dr["id"];
                             }
                             else if (dr["con_type"].ToString() == EbConnectionTypes.SMTP.ToString())
                             {
