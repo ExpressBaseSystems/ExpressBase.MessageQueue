@@ -274,7 +274,7 @@ namespace ExpressBase.MessageQueue.MQServices
                         this.EbConnectionFactory.DataDB.GetNewParameter("userid", EbDbTypes.Int32, request.UserId)
                 };
 
-                var iCount = this.EbConnectionFactory.DataDB.DoQuery(EbConnectionFactory.DataDB.EB_DPUPDATESQL, parameters);
+                var iCount = this.EbConnectionFactory.DataDB.DoQuery(this.EbConnectionFactory.DataDB.EB_DPUPDATESQL, parameters);
 
                 if (iCount.Rows.Capacity > 0)
                 {
@@ -392,7 +392,7 @@ namespace ExpressBase.MessageQueue.MQServices
                         this.InfraConnectionFactory.DataDB.GetNewParameter("solnid", EbDbTypes.String, request.SolutionId)
                 };
 
-                var iCount = this.InfraConnectionFactory.DataDB.DoQuery(EbConnectionFactory.DataDB.EB_LOGOUPDATESQL, parameters);
+                var iCount = this.InfraConnectionFactory.DataDB.DoQuery(this.InfraConnectionFactory.DataDB.EB_LOGOUPDATESQL, parameters);
 
                 if (iCount.Rows.Capacity > 0)
                 {
