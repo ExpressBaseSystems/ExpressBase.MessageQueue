@@ -111,7 +111,7 @@ namespace ExpressBase.MessageQueue.MQServices
                                 {
                                     cons.EmailConfigs = new EmailConfigCollection();
                                 }
-                                EbEmailConfig temp = EbSerializers.Json_Deserialize<EbEmailConfig>(dr["con_obj"].ToString());
+                                EbSmtpConfig temp = EbSerializers.Json_Deserialize<EbSmtpConfig>(dr["con_obj"].ToString());
                                 temp.Id = (int)dr["id"];
 
                                 if ((ConPreferences)Convert.ToInt32(dr["preference"]) == ConPreferences.PRIMARY)
