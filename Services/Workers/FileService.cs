@@ -421,6 +421,176 @@ namespace ExpressBase.MessageQueue.MQServices
             }
             return MqResponse;
         }
+
+        public EbMqResponse Post(UploadImageInfraMqRequest request)
+        {
+            EbDataTable iCountOrg = new EbDataTable();
+            try
+            {
+                Log.Info("Start");
+                Console.ForegroundColor = ConsoleColor.DarkYellow;
+                Log.Info("Log 1");
+                Log.Info("\n Req Object : " + request.BToken + "\n solId : " + request.SolnId);
+                Log.Info("---ServerEventClient1 BaseUri: " + this.ServerEventClient.BaseUri);
+                Log.Info("---ServerEventClient BToken: " + this.ServerEventClient.BearerToken);
+                this.ServerEventClient.BearerToken = request.BToken;
+                this.ServerEventClient.RefreshToken = request.RToken;
+                this.ServerEventClient.RefreshTokenUri = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_GET_ACCESS_TOKEN_URL);
+                Log.Info("---ServerEventClient2 BaseUri: " + this.ServerEventClient.BaseUri);
+                Log.Info("---ServerEventClient BToken: " + this.ServerEventClient.BearerToken);
+                Console.ForegroundColor = ConsoleColor.White;
+               
+                Log.Info("Log 2");
+                if (this.InfraConnectionFactory.ImageManipulate != null && request.Byte.Length > 307200)
+                {
+                    Log.Info("Log 3");
+                    try
+                    {
+                        int qlty = (int)(51200000 / request.Byte.Length);  //Avg size*100 to get the const int (this case 500kb * 100%)
+
+                        qlty = qlty < 15 ? 15 : qlty;
+
+                        string Clodinaryurl = this.InfraConnectionFactory.ImageManipulate[0].Resize
+                                                            (request.Byte, request.ImageRefId.ToString(), qlty);
+
+                        Log.Info("Log 3.25");
+                        if (!string.IsNullOrEmpty(Clodinaryurl))
+                        {
+                            using (var client = new HttpClient())
+                            {
+                                var response = client.GetAsync(Clodinaryurl).Result;
+
+                                if (response.IsSuccessStatusCode)
+                                {
+                                    var responseContent = response.Content;
+
+                                    request.ImgManpSerConId = this.InfraConnectionFactory.ImageManipulate[0].InfraConId;
+                                    request.Byte = responseContent.ReadAsByteArrayAsync().Result;
+                                }
+                                Log.Info("Log 3.5");
+                            }
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        Log.Error("UploadImage Inside: " + e.ToString());
+                    }
+                }
+
+                Log.Info("Log 4");
+                Log.Info("FilesDb: " + this.InfraConnectionFactory.FilesDB.DefaultConId);
+                string filestore_sid = "";
+
+                try
+                {
+                    Log.Info("FilesDB Collection Count: " + this.InfraConnectionFactory.FilesDB.Count);
+                    filestore_sid = this.InfraConnectionFactory.FilesDB.UploadFile(request.ImageRefId.ToString(), request.Byte, request.FileCategory, request.InfraConID);
+                }
+                catch (Exception e)
+                {
+                    Log.Error("Upload Image Error" + e.StackTrace);
+                }
+                Log.Info("FilesDb: " + this.InfraConnectionFactory.FilesDB.UsedConId);
+                Log.Info("File StoreId: " + filestore_sid);
+
+                DbParameter[] parameters =
+                {
+                        this.InfraConnectionFactory.DataDB.GetNewParameter("refid", EbDbTypes.Int32, request.ImageRefId),
+                        this.InfraConnectionFactory.DataDB.GetNewParameter("filestoreid", EbDbTypes.String, filestore_sid),
+
+                        this.InfraConnectionFactory.DataDB.GetNewParameter("length", EbDbTypes.Int64, request.Byte.Length),
+                        this.InfraConnectionFactory.DataDB.GetNewParameter("imagequality_id", EbDbTypes.Int32, (int)request.ImgQuality),
+
+                        this.InfraConnectionFactory.DataDB.GetNewParameter("filedb_con_id", EbDbTypes.Int32,this.InfraConnectionFactory.FilesDB.UsedConId),
+                        this.InfraConnectionFactory.DataDB.GetNewParameter("imgmanpserid", EbDbTypes.Int32, request.ImgManpSerConId),
+
+                        this.InfraConnectionFactory.DataDB.GetNewParameter("is_image", EbDbTypes.Boolean, true)
+                };
+
+                Log.Info("Log 4.5");
+
+                iCountOrg = this.InfraConnectionFactory.DataDB.DoQuery(this.InfraConnectionFactory.DataDB.EB_IMGREFUPDATESQL, parameters);
+
+                Log.Info("Log 5");
+
+                if (iCountOrg.Rows.Capacity > 0)
+                {
+                    this.ServerEventClient.Post<NotifyResponse>(new NotifyUserIdRequest
+                    {
+                        Msg = request.ImageRefId,
+                        Selector = StaticFileConstants.UPLOADSUCCESS,
+                        ToUserAuthId = request.UserAuthId,
+                    });
+                    Log.Info("Log 6");
+
+                    if (this.InfraConnectionFactory.ImageManipulate != null && this.InfraConnectionFactory.ImageManipulate[0].InfraConId != 0)
+                    {
+                        string thumbUrl = this.InfraConnectionFactory.ImageManipulate[0].GetImgSize(request.Byte, request.ImageRefId.ToString(), ImageQuality.small);
+
+                        //TO Get thumbnail
+                        if (!string.IsNullOrEmpty(thumbUrl))
+                        {
+                            byte[] thumbnailBytes;
+
+                            Log.Info("UploadImage: ThumbUrl: " + thumbUrl);
+
+                            using (var client = new HttpClient())
+                            {
+                                var response = client.GetAsync(thumbUrl).Result;
+
+                                if (response.IsSuccessStatusCode)
+                                {
+                                    var responseContent = response.Content;
+
+                                    // by calling .Result you are synchronously reading the result
+                                    thumbnailBytes = responseContent.ReadAsByteArrayAsync().Result;
+
+                                    Log.Info("Log 7");
+
+
+                                    if (thumbnailBytes.Length > 0)
+                                    {
+                                        filestore_sid = this.InfraConnectionFactory.FilesDB.UploadFile(request.ImageRefId.ToString(), thumbnailBytes, request.FileCategory, request.InfraConID);
+                                        DbParameter[] parametersImageSmall =
+                                                        {
+                                                        this.InfraConnectionFactory.DataDB.GetNewParameter("refid", EbDbTypes.Int32, request.ImageRefId),
+                                                        this.InfraConnectionFactory.DataDB.GetNewParameter("filestoreid", EbDbTypes.String, filestore_sid),
+
+                                                        this.InfraConnectionFactory.DataDB.GetNewParameter("length", EbDbTypes.Int64, thumbnailBytes.Length),
+                                                        this.InfraConnectionFactory.DataDB.GetNewParameter("imagequality_id", EbDbTypes.Int32, (int)ImageQuality.small),
+
+                                                        this.InfraConnectionFactory.DataDB.GetNewParameter("filedb_con_id", EbDbTypes.Int32,this.InfraConnectionFactory.FilesDB.UsedConId),
+                                                        this.InfraConnectionFactory.DataDB.GetNewParameter("imgmanpserid", EbDbTypes.Int32, this.InfraConnectionFactory.ImageManipulate[0].InfraConId),
+
+                                                        this.InfraConnectionFactory.DataDB.GetNewParameter("is_image", EbDbTypes.Boolean, true)
+                                                };
+
+                                        Log.Info("Log 8");
+
+                                        var iCountSmall = this.InfraConnectionFactory.DataDB.DoQuery(this.InfraConnectionFactory.DataDB.EB_IMGREFUPDATESQL, parametersImageSmall);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                Log.Error("UploadImage Outside:" + e.StackTrace + "\n" + e.SerializeToString());
+                if (iCountOrg.Rows.Capacity == 0)
+                    this.ServerEventClient.Post<NotifyResponse>(new NotifyUserIdRequest
+                    {
+                        Msg = request.ImageRefId,
+                        Selector = StaticFileConstants.UPLOADFAILURE,
+                        ToUserAuthId = request.UserAuthId,
+                    });
+                Log.Info("Log 9");
+                MqResponse.IsError = true;
+                MqResponse.ErrorString = e.ToString();
+            }
+            return MqResponse;
+        }
     }
 
     [Restrict(InternalOnly = true)]
