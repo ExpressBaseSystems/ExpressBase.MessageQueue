@@ -100,6 +100,18 @@ namespace ExpressBase.MessageQueue.MQServices
                                 if ((ConPreferences)Convert.ToInt32(dr["preference"]) == ConPreferences.PRIMARY)
                                     cons.FilesDbConfig.DefaultConId = temp.Id;
                             }
+                            else if (dr["con_type"].ToString() == EbConnectionTypes.Chat.ToString())
+                            {
+                                if (cons.ChatConfigs == null)
+                                {
+                                    cons.ChatConfigs = new ChatConfigCollection();
+                                }
+                                EbSlackConfig temp = EbSerializers.Json_Deserialize<EbSlackConfig>(dr["con_obj"].ToString());
+                                temp.Id = (int)dr["id"];
+                                cons.ChatConfigs.Fallback.Add(temp);
+                                if ((ConPreferences)Convert.ToInt32(dr["preference"]) == ConPreferences.PRIMARY)
+                                    cons.ChatConfigs.Default = temp;
+                            }
                             else if (dr["con_type"].ToString() == EbConnectionTypes.EbLOGS.ToString())
                             {
                                 cons.LogsDbConfig = EbSerializers.Json_Deserialize<EbDbConfig>(dr["con_obj"].ToString());
@@ -143,6 +155,7 @@ namespace ExpressBase.MessageQueue.MQServices
                                 temp.Id = (int)dr["id"];
                                 cons.CloudinaryConfigs.Add(temp);
                             }
+                           
                             else if (dr["con_type"].ToString() == EbConnectionTypes.MAPS.ToString())
                             {
                                 if (cons.MapConfigs == null)
@@ -153,6 +166,7 @@ namespace ExpressBase.MessageQueue.MQServices
                                 if ((ConPreferences)Convert.ToInt32(dr["preference"]) == ConPreferences.PRIMARY)
                                     cons.MapConfigs.DefaultConId = temp.Id;
                             }
+
                             //else if (dr["con_type"].ToString() == EbConnectionTypes.FTP.ToString())
                             //{
                             //    cons.FTPConnection = EbSerializers.Json_Deserialize<EbFTPConnection>(dr["con_obj"].ToString());
