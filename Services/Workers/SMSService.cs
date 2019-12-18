@@ -52,7 +52,10 @@ namespace ExpressBase.MessageQueue.MQServices
         {
             EbConnectionFactory connectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
 
-            string sql = connectionFactory.DataDB.EB_SMSSERVICE_POST;
+            string sql = @"INSERT INTO logs_sms
+                            (uri, send_to, send_from, message_body, status, error_message, user_id, context_id) 
+                        VALUES 
+                            (@uri, @to, @from, @message_body, @status, @error_message, @user_id, @context_id) RETURNING id;";
 
             DbParameter[] parameters =
                     {
