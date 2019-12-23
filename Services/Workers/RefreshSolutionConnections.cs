@@ -46,6 +46,12 @@ namespace ExpressBase.MessageQueue.MQServices
 
             return res;
         }
+
+        public RefreshSolutionExtResponse Post(RefreshSolutionExtRequest request)
+        {
+            RefreshSolutionConnectionsResponse resp = base.ResolveService<RefreshSolutionConnections>().Post(new RefreshSolutionConnectionsRequest { SolnId = request.SolnId });
+            return new RefreshSolutionExtResponse { Status = resp.Status };
+        }
     }
 
     [Restrict(InternalOnly = true)]
@@ -57,7 +63,8 @@ namespace ExpressBase.MessageQueue.MQServices
 
         public RefreshSolutionConnectionsResponse Post(RefreshSolutionConnectionsRequest request)
         {
-            RefreshSolutionConnectionsResponse res = null;
+            RefreshSolutionConnectionsResponse res = new RefreshSolutionConnectionsResponse();
+            bool status = true;
             try
             {
                 using (DbConnection _dbconnection = this.InfraConnectionFactory.DataDB.GetNewConnection() as Npgsql.NpgsqlConnection)
@@ -155,7 +162,7 @@ namespace ExpressBase.MessageQueue.MQServices
                                 temp.Id = (int)dr["id"];
                                 cons.CloudinaryConfigs.Add(temp);
                             }
-                           
+
                             else if (dr["con_type"].ToString() == EbConnectionTypes.MAPS.ToString())
                             {
                                 if (cons.MapConfigs == null)
@@ -198,9 +205,10 @@ namespace ExpressBase.MessageQueue.MQServices
             catch (Exception e)
             {
                 Log.Info("Exception:" + e.ToString());
-                res = new RefreshSolutionConnectionsResponse();
+                status = false;
                 res.ResponseStatus = new ResponseStatus { Message = e.Message };
             }
+            res.Status = status;
             return res;
         }
 

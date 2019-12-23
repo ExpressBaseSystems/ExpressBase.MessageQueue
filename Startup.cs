@@ -99,15 +99,26 @@ namespace ExpressBase.MessageQueue
 #endif
             SetConfig(new HostConfig { DefaultContentType = MimeTypes.Json });
 
-            var redisConnectionString = string.Format("redis://{0}@{1}:{2}",
-               Environment.GetEnvironmentVariable(EnvironmentConstants.EB_REDIS_PASSWORD),
-               Environment.GetEnvironmentVariable(EnvironmentConstants.EB_REDIS_SERVER),
-               Environment.GetEnvironmentVariable(EnvironmentConstants.EB_REDIS_PORT));
+            string env = Environment.GetEnvironmentVariable(EnvironmentConstants.ASPNETCORE_ENVIRONMENT);
 
-            container.Register<IRedisClientsManager>(c => new RedisManagerPool(redisConnectionString));
+            var redisServer = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_REDIS_SERVER);
+            var redisPassword = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_REDIS_PASSWORD);
+            var redisPort = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_REDIS_PORT);
+
+            RedisClient client = null;
+            if (env == "Development" || env == "Production")
+            {
+                var redisConnectionString = string.Format("redis://{0}@{1}:{2}", redisPassword, redisServer, redisPort);
+                container.Register<IRedisClientsManager>(c => new RedisManagerPool(redisConnectionString));
+                client = (container.Resolve<IRedisClientsManager>() as RedisManagerPool).GetClient() as RedisClient;
+            }
+            else
+            {
+                container.Register<IRedisClientsManager>(c => new RedisManagerPool(redisServer));
+                client = (container.Resolve<IRedisClientsManager>() as RedisManagerPool).GetClient() as RedisClient;
+            }
 
             //Setting Assembly version in Redis
-            RedisClient client = (container.Resolve<IRedisClientsManager>() as RedisManagerPool).GetClient() as RedisClient;
             AssemblyName assembly = Assembly.GetExecutingAssembly().GetName();
             String version = assembly.Name.ToString() + " - " + assembly.Version.ToString();
             client.Set("MQAssembly", version);
@@ -136,7 +147,7 @@ namespace ExpressBase.MessageQueue
             mqServer.RegisterHandler<UploadDpRequest>(base.ExecuteMessage);
             mqServer.RegisterHandler<UploadLogoRequest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<GetImageFtpRequest>(base.ExecuteMessage, 3);
-            
+
             mqServer.RegisterHandler<SMSSentRequest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<SMSStatusLogMqRequest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<SlackPostMqRequest>(base.ExecuteMessage);
@@ -183,7 +194,7 @@ namespace ExpressBase.MessageQueue
                 try
                 {
                     log.Info("In Try");
-                    if (requestDto != null)
+                    if (requestDto != null && requestDto.GetType() != typeof(RefreshSolutionExtRequest))
                     {
                         log.Info("In Auth Header");
                         var auth = req.Headers[HttpHeaders.Authorization];
