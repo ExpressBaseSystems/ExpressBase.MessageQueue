@@ -42,7 +42,7 @@ namespace ExpressBase.MessageQueue.MQServices
                     request.InfraConID
                     );
 
-                string sql = _ebConnectionFactory.DataDB.Eb_MQ_UPLOADFILE;
+                string sql = _ebConnectionFactory.DataDB.EB_MQ_UPLOADFILE;
 
                 DbParameter[] parameters =
                 {
@@ -379,6 +379,11 @@ namespace ExpressBase.MessageQueue.MQServices
 
                 string filestore_sid = this.InfraConnectionFactory.FilesDB.UploadFile(request.ImageRefId.ToString(), request.Byte, request.FileCategory, request.InfraConID);
 
+                string sql = @"INSERT INTO eb_files_ref_variations 
+                                    (eb_files_ref_id, filestore_sid, length, imagequality_id, is_image, img_manp_ser_con_id, filedb_con_id)
+                                VALUES 
+                                    (:refid, :filestoreid, :length, :imagequality_id, :is_image, :imgmanpserid, :filedb_con_id) RETURNING id;
+                                UPDATE eb_solutions SET logorefid = :refid WHERE isolution_id = :solnid;";
 
                 DbParameter[] parameters =
                 {
@@ -392,7 +397,7 @@ namespace ExpressBase.MessageQueue.MQServices
                         this.InfraConnectionFactory.DataDB.GetNewParameter("solnid", EbDbTypes.String, request.SolutionId)
                 };
 
-                var iCount = this.InfraConnectionFactory.DataDB.DoQuery(this.InfraConnectionFactory.DataDB.EB_LOGOUPDATESQL, parameters);
+                var iCount = this.InfraConnectionFactory.DataDB.DoQuery(sql, parameters);
 
                 if (iCount.Rows.Capacity > 0)
                 {

@@ -162,6 +162,16 @@ namespace ExpressBase.MessageQueue.MQServices
                                 temp.Id = (int)dr["id"];
                                 cons.CloudinaryConfigs.Add(temp);
                             }
+                            else if (dr["con_type"].ToString() == EbConnectionTypes.AUTHENTICATION.ToString())
+                            {
+                                if (cons.AUTHENTICATIONConfigs == null)
+                                {
+                                    cons.AUTHENTICATIONConfigs = new AuthenticationCollection();
+                                }
+                                EbfacebbokConfig temp = EbSerializers.Json_Deserialize<EbfacebbokConfig>(dr["con_obj"].ToString());
+                                temp.Id = (int)dr["id"];
+                                cons.AUTHENTICATIONConfigs.Add(temp);
+                            }
 
                             else if (dr["con_type"].ToString() == EbConnectionTypes.MAPS.ToString())
                             {
