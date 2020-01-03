@@ -106,15 +106,16 @@ namespace ExpressBase.MessageQueue
             var redisPort = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_REDIS_PORT);
 
             RedisClient client = null;
-            if (env == "Development" || env == "Production")
+
+            if (env == "Staging")
             {
-                var redisConnectionString = string.Format("redis://{0}@{1}:{2}", redisPassword, redisServer, redisPort);
-                container.Register<IRedisClientsManager>(c => new RedisManagerPool(redisConnectionString));
+                container.Register<IRedisClientsManager>(c => new RedisManagerPool(redisServer));
                 client = (container.Resolve<IRedisClientsManager>() as RedisManagerPool).GetClient() as RedisClient;
             }
             else
             {
-                container.Register<IRedisClientsManager>(c => new RedisManagerPool(redisServer));
+                var redisConnectionString = string.Format("redis://{0}@{1}:{2}", redisPassword, redisServer, redisPort);
+                container.Register<IRedisClientsManager>(c => new RedisManagerPool(redisConnectionString));
                 client = (container.Resolve<IRedisClientsManager>() as RedisManagerPool).GetClient() as RedisClient;
             }
 
