@@ -1,6 +1,7 @@
 ﻿using ExpressBase.Common;
 using ExpressBase.Common.Constants;
 using ExpressBase.Common.EbServiceStack.ReqNRes;
+using ExpressBase.Common.ServerEvents_Artifacts;
 using ExpressBase.Common.ServiceClients;
 using ExpressBase.Common.ServiceStack.Auth;
 using ExpressBase.Objects.ServiceStack_Artifacts;
@@ -147,6 +148,7 @@ namespace ExpressBase.MessageQueue
             mqServer.RegisterHandler<UploadImageInfraMqRequest>(base.ExecuteMessage);
             mqServer.RegisterHandler<UploadDpRequest>(base.ExecuteMessage);
             mqServer.RegisterHandler<UploadLogoRequest>(base.ExecuteMessage);
+            mqServer.RegisterHandler<NotificationToDBRequest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<GetImageFtpRequest>(base.ExecuteMessage, 3);
 
             mqServer.RegisterHandler<SMSSentRequest>(base.ExecuteMessage);
