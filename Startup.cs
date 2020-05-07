@@ -108,17 +108,17 @@ namespace ExpressBase.MessageQueue
 
             RedisClient client = null;
 
-            if (env == "Staging")
-            {
-                container.Register<IRedisClientsManager>(c => new RedisManagerPool(redisServer));
-                client = (container.Resolve<IRedisClientsManager>() as RedisManagerPool).GetClient() as RedisClient;
-            }
-            else
-            {
+            //if (env == "Staging")
+            //{
+            //    container.Register<IRedisClientsManager>(c => new RedisManagerPool(redisServer));
+            //    client = (container.Resolve<IRedisClientsManager>() as RedisManagerPool).GetClient() as RedisClient;
+            //}
+            //else
+            //{
                 var redisConnectionString = string.Format("redis://{0}@{1}:{2}", redisPassword, redisServer, redisPort);
                 container.Register<IRedisClientsManager>(c => new RedisManagerPool(redisConnectionString));
                 client = (container.Resolve<IRedisClientsManager>() as RedisManagerPool).GetClient() as RedisClient;
-            }
+            //}
 
             //Setting Assembly version in Redis
             AssemblyName assembly = Assembly.GetExecutingAssembly().GetName();
