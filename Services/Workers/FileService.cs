@@ -859,7 +859,7 @@ namespace ExpressBase.MessageQueue.MQServices
 
                 return (int)table.Rows[0][0];
             }
-            catch (Exception e)
+            catch 
             {
                 return 0;
             }
