@@ -2,8 +2,11 @@
 using ExpressBase.Common.Structures;
 using ExpressBase.Objects.Services;
 using ExpressBase.Objects.ServiceStack_Artifacts;
+using Newtonsoft.Json;
+using RabbitMQ.Client.Framing.Impl;
 using ServiceStack;
 using ServiceStack.Messaging;
+using System;
 using System.Data.Common;
 
 namespace ExpressBase.MessageQueue.MQServices
@@ -21,57 +24,64 @@ namespace ExpressBase.MessageQueue.MQServices
 
             var MsgStatus = this.EbConnectionFactory.SMSConnection.SendSMS(req.To, req.Body);
 
-            //SMSStatusLogMqRequest logMqRequest = new SMSStatusLogMqRequest
-            //{ SMSSentStatus = new SMSSentStatus()};
+            SMSStatusLogMqRequest logMqRequest = new SMSStatusLogMqRequest
+            { SMSSentStatus = new SMSSentStatus() };
 
-            //foreach (var Info in MsgStatus)
-            //{
-            //    if (Info.Key == "To")
-            //        logMqRequest.SMSSentStatus.To = Info.Value;
-            //    if (Info.Key == "From")
-            //        logMqRequest.SMSSentStatus.From = Info.Value;
-            //    if (Info.Key == "Uri")
-            //        logMqRequest.SMSSentStatus.Uri = Info.Value;
-            //    if (Info.Key == "Body")
-            //        logMqRequest.SMSSentStatus.Body = Info.Value;
-            //    if (Info.Key == "Status")
-            //        logMqRequest.SMSSentStatus.Status = Info.Value;
-            //    if (Info.Key == "SentTime")
-            //        //logMqRequest.SMSSentStatus.SentTime = DateTime.Parse(Info.Value);
-            //        if (Info.Key == "ErrorMessage")
-            //            logMqRequest.SMSSentStatus.ErrorMessage = Info.Value;
-            //}
-            //logMqRequest.UserId = req.UserId;
-            //logMqRequest.SolnId = req.SolnId;
+            foreach (var Info in MsgStatus)
+            {
+                if (Info.Key == "To")
+                    logMqRequest.SMSSentStatus.To = Info.Value;
+                if (Info.Key == "From")
+                    logMqRequest.SMSSentStatus.From = Info.Value;
+                if (Info.Key == "Body")
+                    logMqRequest.SMSSentStatus.Body = Info.Value;
+                if (Info.Key == "Status")
+                    logMqRequest.SMSSentStatus.Status = Info.Value;
+                if (Info.Key == "Result")
+                    logMqRequest.SMSSentStatus.Result = Info.Value;
+                if (Info.Key == "ConId")
+                    logMqRequest.SMSSentStatus.ConId = int.Parse(Info.Value);
+            }
+            logMqRequest.UserId = req.UserId;
+            logMqRequest.SolnId = req.SolnId;
+            logMqRequest.RefId = req.RefId;
+            logMqRequest.MetaData = JsonConvert.SerializeObject(req.Params);
 
-           // this.MessageProducer3.Publish(logMqRequest);
+            //this.MessageProducer3.Publish(logMqRequest);
+            SaveSMSLogs(logMqRequest);
+
             return null;
         }
 
-        public string Post(SMSStatusLogMqRequest request)
+        public void SaveSMSLogs(SMSStatusLogMqRequest request)
         {
             EbConnectionFactory connectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
+            try
+            {
 
-            string sql = @"INSERT INTO logs_sms
-                            (uri, send_to, send_from, message_body, status, error_message, user_id, context_id) 
-                        VALUES 
-                            (@uri, @to, @from, @message_body, @status, @error_message, @user_id, @context_id) RETURNING id;";
+                string sql = @"INSERT INTO eb_sms_logs
+                                (send_to, send_from, message_body, status, result, refid, metadata, con_id, eb_created_by, eb_created_at) 
+                            VALUES 
+                                (@to, @from, @message_body, @status, @result, @refid, @metadata, @con_id, @user_id, NOW()) RETURNING id;";
 
-            DbParameter[] parameters =
-                    {
-                        connectionFactory.DataDB.GetNewParameter("uri", EbDbTypes.String, string.IsNullOrEmpty(request.SMSSentStatus.Uri)?string.Empty:request.SMSSentStatus.Uri),
+                DbParameter[] parameters =
+                        {
                         connectionFactory.DataDB.GetNewParameter("to",EbDbTypes.String, request.SMSSentStatus.To),
                         connectionFactory.DataDB.GetNewParameter("from",EbDbTypes.String, request.SMSSentStatus.From),
                         connectionFactory.DataDB.GetNewParameter("message_body",EbDbTypes.String, string.IsNullOrEmpty(request.SMSSentStatus.Body)?string.Empty:request.SMSSentStatus.Body),
                         connectionFactory.DataDB.GetNewParameter("status",EbDbTypes.String, string.IsNullOrEmpty(request.SMSSentStatus.Status)?string.Empty:request.SMSSentStatus.Status),
-                        //connectionFactory.DataDB.GetNewParameter("sent_time",System.Data.DbType.DateTime, request.SMSSentStatus.SentTime),
-                        connectionFactory.DataDB.GetNewParameter("error_message",EbDbTypes.String, string.IsNullOrEmpty(request.SMSSentStatus.ErrorMessage)?string.Empty:request.SMSSentStatus.ErrorMessage),
-                        connectionFactory.DataDB.GetNewParameter("user_id",EbDbTypes.Int32, request.UserId),
-                        connectionFactory.DataDB.GetNewParameter("context_id",EbDbTypes.Int32, string.IsNullOrEmpty(request.ContextId.ToString())?request.UserId:request.ContextId)
+                        connectionFactory.DataDB.GetNewParameter("result", EbDbTypes.String, string.IsNullOrEmpty(request.SMSSentStatus.Result)?string.Empty:request.SMSSentStatus.Result),
+                        connectionFactory.DataDB.GetNewParameter("refid", EbDbTypes.String, string.IsNullOrEmpty(request.RefId)?string.Empty:request.RefId),
+                        connectionFactory.DataDB.GetNewParameter("metadata", EbDbTypes.Json, request.MetaData),
+                        connectionFactory.DataDB.GetNewParameter("con_id", EbDbTypes.Int32, request.SMSSentStatus.ConId),
+                        connectionFactory.DataDB.GetNewParameter("user_id",EbDbTypes.Int32, request.UserId)
                         };
-            var iCount = connectionFactory.DataDB.DoQuery(sql, parameters);
-
-            return null;
+                var iCount = connectionFactory.DataDB.DoQuery(sql, parameters);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Exception in SMS Save : " + ex);
+            }
         }
     }
 }
