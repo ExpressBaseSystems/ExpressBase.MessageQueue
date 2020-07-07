@@ -197,7 +197,7 @@ namespace ExpressBase.MessageQueue
                 try
                 {
                     log.Info("In Try");
-                    if (requestDto != null && requestDto.GetType() != typeof(RefreshSolutionExtRequest))
+                    if (requestDto != null /*&& requestDto.GetType() != typeof(RefreshSolutionExtRequest)*/)
                     {
                         log.Info("In Auth Header");
                         var auth = req.Headers[HttpHeaders.Authorization];

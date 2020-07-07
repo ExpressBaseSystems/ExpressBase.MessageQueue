@@ -47,11 +47,11 @@ namespace ExpressBase.MessageQueue.MQServices
             return res;
         }
 
-        public RefreshSolutionExtResponse Post(RefreshSolutionExtRequest request)
-        {
-            RefreshSolutionConnectionsResponse resp = base.ResolveService<RefreshSolutionConnections>().Post(new RefreshSolutionConnectionsRequest { SolnId = request.SolnId });
-            return new RefreshSolutionExtResponse { Status = resp.Status };
-        }
+        //public RefreshSolutionExtResponse Post(RefreshSolutionExtRequest request)
+        //{
+        //    RefreshSolutionConnectionsResponse resp = base.ResolveService<RefreshSolutionConnections>().Post(new RefreshSolutionConnectionsRequest { SolnId = request.SolnId });
+        //    return new RefreshSolutionExtResponse { Status = resp.Status };
+        //}
     }
 
     [Restrict(InternalOnly = true)]
