@@ -84,10 +84,8 @@ namespace ExpressBase.MessageQueue
             {
                 HashAlgorithm = "RS256",
                 PublicKeyXml = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_JWT_PUBLIC_KEY_XML),
-#if (DEBUG)
                 RequireSecureConnection = false,
                 //EncryptPayload = true,
-#endif
             };
 
             this.Plugins.Add(new AuthFeature(() => new CustomUserSession(),
