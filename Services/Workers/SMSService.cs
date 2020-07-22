@@ -46,8 +46,7 @@ namespace ExpressBase.MessageQueue.MQServices
             logMqRequest.SolnId = req.SolnId;
             logMqRequest.RefId = req.RefId;
             logMqRequest.MetaData = JsonConvert.SerializeObject(req.Params);
-
-            //this.MessageProducer3.Publish(logMqRequest);
+            logMqRequest.RetryOf = req.RetryOf;
             SaveSMSLogs(logMqRequest);
 
             return null;
@@ -60,9 +59,9 @@ namespace ExpressBase.MessageQueue.MQServices
             {
 
                 string sql = @"INSERT INTO eb_sms_logs
-                                (send_to, send_from, message_body, status, result, refid, metadata, con_id, eb_created_by, eb_created_at) 
-                            VALUES 
-                                (@to, @from, @message_body, @status, @result, @refid, @metadata, @con_id, @user_id, NOW()) RETURNING id;";
+                                (send_to, send_from, message_body, status, result, refid, metadata, retryof, con_id, eb_created_by, eb_created_at)
+                            VALUES
+                                (@to, @from, @message_body, @status, @result, @refid, @metadata, @retryof, @con_id, @user_id, NOW()) RETURNING id;";
 
                 DbParameter[] parameters =
                         {
@@ -73,6 +72,7 @@ namespace ExpressBase.MessageQueue.MQServices
                         connectionFactory.DataDB.GetNewParameter("result", EbDbTypes.String, string.IsNullOrEmpty(request.SMSSentStatus.Result)?string.Empty:request.SMSSentStatus.Result),
                         connectionFactory.DataDB.GetNewParameter("refid", EbDbTypes.String, string.IsNullOrEmpty(request.RefId)?string.Empty:request.RefId),
                         connectionFactory.DataDB.GetNewParameter("metadata", EbDbTypes.Json, request.MetaData),
+                        connectionFactory.DataDB.GetNewParameter("retryof", EbDbTypes.Int32, request.RetryOf),
                         connectionFactory.DataDB.GetNewParameter("con_id", EbDbTypes.Int32, request.SMSSentStatus.ConId),
                         connectionFactory.DataDB.GetNewParameter("user_id",EbDbTypes.Int32, request.UserId)
                         };
