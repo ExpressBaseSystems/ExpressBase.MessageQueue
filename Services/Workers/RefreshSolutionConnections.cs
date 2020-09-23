@@ -184,6 +184,11 @@ namespace ExpressBase.MessageQueue.MQServices
                                     cons.MapConfigs.DefaultConId = temp.Id;
                             }
 
+                            else if (dr["con_type"].ToString() == EbConnectionTypes.MOBILECONFIG.ToString())
+                            {
+                                cons.MobileConfig = EbSerializers.Json_Deserialize<MobileConfig>(dr["con_obj"].ToString());
+                                cons.MobileConfig.Id = (int)dr["id"];
+                            }
                             //else if (dr["con_type"].ToString() == EbConnectionTypes.FTP.ToString())
                             //{
                             //    cons.FTPConnection = EbSerializers.Json_Deserialize<EbFTPConnection>(dr["con_obj"].ToString());
