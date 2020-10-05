@@ -1,4 +1,5 @@
-﻿using ExpressBase.Common;
+﻿using Dropbox.Api.TeamLog;
+using ExpressBase.Common;
 using ExpressBase.Common.Connections;
 using ExpressBase.Common.Constants;
 using ExpressBase.Common.Data;
@@ -11,6 +12,7 @@ using ExpressBase.Objects.ServiceStack_Artifacts;
 using ServiceStack;
 using ServiceStack.Messaging;
 using System;
+using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 
@@ -188,6 +190,15 @@ namespace ExpressBase.MessageQueue.MQServices
                             {
                                 cons.MobileConfig = EbSerializers.Json_Deserialize<MobileConfig>(dr["con_obj"].ToString());
                                 cons.MobileConfig.Id = (int)dr["id"];
+                            }
+
+                            else if (dr["con_type"].ToString() == EbConnectionTypes.SUPPORTINGDATA.ToString())
+                            {
+                                if (cons.SupportingDataDbConfig == null)
+                                    cons.SupportingDataDbConfig = new List<EbDbConfig>();
+                                EbDbConfig temp = EbSerializers.Json_Deserialize<EbDbConfig>(dr["con_obj"].ToString());
+                                temp.Id = (int)dr["id"];
+                                cons.SupportingDataDbConfig.Add(temp);
                             }
                             //else if (dr["con_type"].ToString() == EbConnectionTypes.FTP.ToString())
                             //{
