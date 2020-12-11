@@ -16,7 +16,7 @@ using System.Threading.Tasks;
 
 namespace ExpressBase.MessageQueue.Services.Workers
 {
-    public class SecurityMqServices : EbMqBaseService
+	public class SecurityMqServices : EbMqBaseService
     {
        
         public SecurityMqServices(  IEbServerEventClient _sec, IServiceClient _ssclient, IEbConnectionFactory _dbf, IMessageProducer _mqp) : base(  _sec, _ssclient, _dbf, _mqp)
@@ -127,6 +127,13 @@ namespace ExpressBase.MessageQueue.Services.Workers
             return MqResponse;
         }
 
+		
+	}
+
+	[Restrict(InternalOnly = true)]
+	public class SecurityMqInternalServices : EbMqBaseService
+	{
+		public SecurityMqInternalServices(IEbConnectionFactory _dbf) : base(_dbf) { }
 		public EbMqResponse Post(BrowserExceptionRequest request)
 		{
 			try
@@ -153,35 +160,4 @@ namespace ExpressBase.MessageQueue.Services.Workers
 			return MqResponse;
 		}
 	}
-
-    //[Restrict(InternalOnly = true)]
-    //public class SecurityMqInternalServices : EbMqBaseService
-    //{
-    //    public SecurityMqInternalServices(IEbConnectionFactory _dbf) : base(_dbf) { }
-    //    public EbMqResponse Post(BrowserExceptionRequest request)
-    //    {
-    //        try
-    //        {
-				//this.EbConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
-				//string sql = @"INSERT INTO eb_broswer_exceptions(user_id, device_info, ip_address, error_msg, eb_created_at) VALUES ( :userid, :deviceInfo, :ipaddress, :errorMsg,  NOW());";
-    //            DbParameter[] parameters = new DbParameter[] {
-    //            this.EbConnectionFactory.DataDB.GetNewParameter("userid", EbDbTypes.Int32, request.UserId),
-    //            this.EbConnectionFactory.DataDB.GetNewParameter("deviceInfo", EbDbTypes.String, request.Device_info),
-    //            this.EbConnectionFactory.DataDB.GetNewParameter("ipaddress", EbDbTypes.String, request.Ip_address),
-    //            this.EbConnectionFactory.DataDB.GetNewParameter("errorMsg", EbDbTypes.String, request.Error_msg)
-    //            };
-    //            int t = this.EbConnectionFactory.DataDB.DoNonQuery(sql, parameters.ToArray());
-    //            if (t < 0)
-    //            {
-    //                Console.WriteLine("data stored into eb_broswer_Exceptions table");
-    //            }
-    //        }
-    //        catch (Exception e)
-    //        {
-    //            Console.WriteLine("BrowserExceptionRequest" + e.Message + e.StackTrace);
-    //        }
-
-    //        return MqResponse;
-    //    }
-    //}
 }
