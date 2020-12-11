@@ -1,5 +1,6 @@
 ﻿using ExpressBase.Common;
 using ExpressBase.Common.Constants;
+using ExpressBase.Common.Data;
 using ExpressBase.Common.EbServiceStack.ReqNRes;
 using ExpressBase.Common.ServerEvents_Artifacts;
 using ExpressBase.Common.ServiceClients;
@@ -127,6 +128,7 @@ namespace ExpressBase.MessageQueue
 
             container.Register<IEbServerEventClient>(c => new EbServerEventClient()).ReusedWithin(ReuseScope.Request);
             container.Register<IServiceClient>(c => new JsonServiceClient(Environment.GetEnvironmentVariable(EnvironmentConstants.EB_SERVICESTACK_EXT_URL))).ReusedWithin(ReuseScope.Request);
+            container.Register<IEbConnectionFactory>(c => new EbConnectionFactory(c)).ReusedWithin(ReuseScope.Request);
 
             RabbitMqMessageFactory rabitFactory = new RabbitMqMessageFactory();
             rabitFactory.ConnectionFactory.UserName = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_RABBIT_USER);
