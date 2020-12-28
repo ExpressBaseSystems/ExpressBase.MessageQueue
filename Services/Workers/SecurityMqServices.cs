@@ -198,7 +198,7 @@ namespace ExpressBase.MessageQueue.Services.Workers
 			try
 			{
 				this.EbConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
-				string sql = @"INSERT INTO eb_broswer_exceptions(user_id, device_info, ip_address, error_msg, eb_created_at) VALUES ( :userid, :deviceInfo, :ipaddress, :errorMsg,  NOW());";
+				string sql = @"INSERT INTO eb_browser_exceptions(user_id, device_info, ip_address, error_msg, eb_created_at) VALUES ( :userid, :deviceInfo, :ipaddress, :errorMsg,  NOW());";
 				DbParameter[] parameters = new DbParameter[] {
 				this.EbConnectionFactory.DataDB.GetNewParameter("userid", EbDbTypes.Int32, request.UserId),
 				this.EbConnectionFactory.DataDB.GetNewParameter("deviceInfo", EbDbTypes.String, request.Device_info),
@@ -208,7 +208,7 @@ namespace ExpressBase.MessageQueue.Services.Workers
 				int t = this.EbConnectionFactory.DataDB.DoNonQuery(sql, parameters.ToArray());
 				if (t < 0)
 				{
-					Console.WriteLine("data stored into eb_broswer_Exceptions table");
+					Console.WriteLine("data stored into eb_browser_exceptions table");
 				}
 			}
 			catch (Exception e)
