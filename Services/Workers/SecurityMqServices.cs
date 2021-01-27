@@ -13,6 +13,8 @@ using System.Collections.Generic;
 using System.Data.Common;
 using System.Linq;
 using System.Threading.Tasks;
+using ExpressBase.Security;
+using ServiceStack.Auth;
 
 namespace ExpressBase.MessageQueue.Services.Workers
 {
@@ -113,45 +115,35 @@ namespace ExpressBase.MessageQueue.Services.Workers
 					if (!String.IsNullOrEmpty(_userId[i]))
 					{
 						string _userauth_id = request.SolnId + ":" + _userId[i] + ":" + request.WhichConsole;
-						var usr = GetUserObject(_userauth_id, true);
-						try
+						User user_redis = null;
+						user_redis = this.Redis.Get<User>(_userauth_id);
+						if (user_redis != null)
 						{
-							this.ServiceStackClient.BearerToken = request.BToken;
-							this.ServiceStackClient.RefreshToken = request.RToken;
-							this.ServiceStackClient.RefreshTokenUri = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_GET_ACCESS_TOKEN_URL);
-							this.ServiceStackClient.Post<NotifyByUserIDResponse>(new NotifyByUserIDRequest
+							user_redis = UpdateRedisUserObject(user_redis, request.SolnId, _userId[i], request.WhichConsole, _userauth_id);
+
+
+							try
 							{
-								Link = "/UserDashBoard",
-								Title = $"Your roles was changed successfully",
-								UsersID = usr.UserId,
-								User_AuthId = usr.AuthId,
-								BToken = request.BToken,
-								RToken = request.RToken
+								this.ServiceStackClient.BearerToken = request.BToken;
+								this.ServiceStackClient.RefreshToken = request.RToken;
+								this.ServiceStackClient.RefreshTokenUri = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_GET_ACCESS_TOKEN_URL);
+								this.ServiceStackClient.Post<NotifyByUserIDResponse>(new NotifyByUserIDRequest
+								{
+									Link = "/UserDashBoard",
+									Title = $"Your roles was changed successfully",
+									UsersID = user_redis.UserId,
+									User_AuthId = user_redis.AuthId,
+									BToken = request.BToken,
+									RToken = request.RToken
 
-							});
-						}
-						catch (Exception ex)
-						{
-							Console.WriteLine("user role changes-send notification" + ex.Message + ex.StackTrace);
-						}
-						try
-						{
-							this.ServerEventClient.BearerToken = request.BToken;
-							this.ServerEventClient.RefreshToken = request.RToken;
-							this.ServerEventClient.RefreshTokenUri = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_GET_ACCESS_TOKEN_URL);
-							this.ServerEventClient.Post<NotifyResponse>(new NotifyUserAuthIdRequest
+								});
+							}
+							catch (Exception ex)
 							{
-								//ToChannel = new string[] {"file-upload" },
-								Msg = "User Role Changed success",
-								Selector = "cmd.userRoleChanged",
-								To_UserAuthId = usr.AuthId
+								Console.WriteLine("user role changes-send notification" + ex.Message + ex.StackTrace);
+							}
 
-
-							});
-						}
-						catch (Exception exp)
-						{
-							Console.WriteLine("user role changes-send SSE" + exp.Message + exp.StackTrace);
+							NotifyByUserAuthId(request.BToken, request.RToken, user_redis.AuthId, "User role changed successfully", "cmd.UpdateUserMenu");
 						}
 					}
 				}
@@ -166,18 +158,65 @@ namespace ExpressBase.MessageQueue.Services.Workers
 			string _userauth_id = request.SolnId + ":" + request.UserId + ":uc";
 			try
 			{
-				this.ServerEventClient.BearerToken = request.BToken;
-				this.ServerEventClient.RefreshToken = request.RToken;
-				this.ServerEventClient.RefreshTokenUri = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_GET_ACCESS_TOKEN_URL);
-				this.ServerEventClient.Post<NotifyResponse>(new NotifyUserAuthIdRequest
+				bool SendSSE = false;
+				if ((String.IsNullOrEmpty(request.LocationAdd) || String.IsNullOrEmpty(request.LocationDelete)))
 				{
-					//ToChannel = new string[] {"file-upload" },
-					Msg = "You have been suspended from using this solution.",
-					Selector = "cmd.userDisabled",
-					To_UserAuthId = _userauth_id
+					SendSSE = true;
+				}
+				else
+				{
+					var listOld = request.OldRole_Ids.Except(request.NewRole_Ids).ToList();
+					var listNew = request.NewRole_Ids.Except(request.OldRole_Ids).ToList();
+					if (listNew.Count() + listOld.Count() > 0)
+					{
+						SendSSE = true;
+					}
+					else
+					{
+						var OldGrpLst = request.OldUserGroups.Except(request.NewUserGroups).ToList();
+						var NewGrpLst = request.NewUserGroups.Except(request.OldUserGroups).ToList();
+						if (NewGrpLst.Count() + OldGrpLst.Count() > 0)
+						{
+							SendSSE = true;
+						}
+					}
+				}
+
+				if (SendSSE)
+				{
+					if (!String.IsNullOrEmpty(request.UserId.ToString()))
+					{
+						User user_redis = null;
+						user_redis = this.Redis.Get<User>(_userauth_id);
+						if (user_redis != null)
+						{
+							user_redis = UpdateRedisUserObject(user_redis, request.SolnId, request.UserId.ToString(), request.WhichConsole, _userauth_id);
+						}
+					}
+					try
+					{
+						this.ServiceStackClient.BearerToken = request.BToken;
+						this.ServiceStackClient.RefreshToken = request.RToken;
+						this.ServiceStackClient.RefreshTokenUri = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_GET_ACCESS_TOKEN_URL);
+						this.ServiceStackClient.Post<NotifyByUserIDResponse>(new NotifyByUserIDRequest
+						{
+							Link = "/UserDashBoard",
+							Title = $"Your User preference has updated successfully",
+							UsersID = request.UserId,
+							User_AuthId = _userauth_id,
+							BToken = request.BToken,
+							RToken = request.RToken
+
+						});
+					}
+					catch (Exception ex)
+					{
+						Console.WriteLine("user role changes-send notification" + ex.Message + ex.StackTrace);
+					}
+					NotifyByUserAuthId(request.BToken, request.RToken, _userauth_id, "User preference has updated successfully", "cmd.UpdateUserMenu");
+				}
 
 
-				});
 			}
 			catch (Exception exp)
 			{
@@ -186,7 +225,95 @@ namespace ExpressBase.MessageQueue.Services.Workers
 			return MqResponse;
 		}
 
+		public EbMqResponse Post(SaveUserGroupMqRequest request)
+		{
+			bool SendSSE = false;
+			var OldGrpLst = request.OldUserGroups.Except(request.NewUserGroups).ToList();
+			var NewGrpLst = request.NewUserGroups.Except(request.OldUserGroups).ToList();
+			if (NewGrpLst.Count() + OldGrpLst.Count() > 0)
+			{
+				SendSSE = true;
+			}
+			if (SendSSE)
+			{
+				NewGrpLst.AddRange(OldGrpLst);
+				foreach (var usrId in NewGrpLst)
+				{
 
+					string _userauth_id = request.SolnId + ":" + usrId + ":uc";
+					if (!String.IsNullOrEmpty(request.UserId.ToString()))
+					{
+						User user_redis = null;
+						user_redis = this.Redis.Get<User>(_userauth_id);
+						if (user_redis != null)
+						{
+							user_redis = UpdateRedisUserObject(user_redis, request.SolnId, usrId, request.WhichConsole, _userauth_id);
+						}
+					}
+					try
+					{
+						this.ServiceStackClient.BearerToken = request.BToken;
+						this.ServiceStackClient.RefreshToken = request.RToken;
+						this.ServiceStackClient.RefreshTokenUri = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_GET_ACCESS_TOKEN_URL);
+						this.ServiceStackClient.Post<NotifyByUserIDResponse>(new NotifyByUserIDRequest
+						{
+							Link = "/UserDashBoard",
+							Title = $"Your User Group has updated successfully",
+							UsersID = int.Parse(usrId),
+							User_AuthId = _userauth_id,
+							BToken = request.BToken,
+							RToken = request.RToken
+
+						});
+					}
+					catch (Exception ex)
+					{
+						Console.WriteLine("user role changes-send notification" + ex.Message + ex.StackTrace);
+					}
+					NotifyByUserAuthId(request.BToken, request.RToken, _userauth_id, "User Group has updated successfully", "cmd.UpdateUserMenu");
+				}
+			}
+			return MqResponse;
+		}
+		public EbMqResponse Post(SuspendUserMqRequest request)
+		{
+			string _userauth_id = request.SolnId + ":" + request.UserId + ":uc";
+			NotifyByUserAuthId(request.BToken, request.RToken, _userauth_id, "You have been suspended from using this solution.", "cmd.userDisabled");
+
+			return MqResponse;
+		}
+
+		public User UpdateRedisUserObject(User user_redis, string SolnId, string UserId, string WC, string UserAuth_Id)
+		{
+			IEbConnectionFactory factory = new EbConnectionFactory(SolnId, Redis);
+			User user = User.GetUserObject(factory.DataDB, int.Parse(UserId), WC, null, null);
+			user_redis.Permissions = user.Permissions;
+			user_redis.Roles = user.Roles;
+			user_redis.RoleIds = user.RoleIds;
+			user_redis.UserGroupIds = user.UserGroupIds;
+			this.Redis.Set<IUserAuth>(UserAuth_Id, user_redis);
+			return user_redis;
+		}
+
+		public void NotifyByUserAuthId(string BToken, string RToken, string UserAuthId, string Msg, string Selector)
+		{
+			try
+			{
+				this.ServerEventClient.BearerToken = BToken;
+				this.ServerEventClient.RefreshToken = RToken;
+				this.ServerEventClient.RefreshTokenUri = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_GET_ACCESS_TOKEN_URL);
+				this.ServerEventClient.Post<NotifyResponse>(new NotifyUserAuthIdRequest
+				{
+					Msg = Msg,
+					Selector = Selector,
+					To_UserAuthId = UserAuthId
+				});
+			}
+			catch (Exception exp)
+			{
+				Console.WriteLine("user role changes-send SSE" + exp.Message + exp.StackTrace);
+			}
+		}
 	}
 
 	[Restrict(InternalOnly = true)]

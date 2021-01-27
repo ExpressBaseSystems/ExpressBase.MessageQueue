@@ -151,7 +151,9 @@ namespace ExpressBase.MessageQueue
             mqServer.RegisterHandler<NotificationToDBRequest>(base.ExecuteMessage);
             mqServer.RegisterHandler<SaveRoleMqRequest>(base.ExecuteMessage);
             mqServer.RegisterHandler<SaveUserMqRequest>(base.ExecuteMessage);
+            mqServer.RegisterHandler<SuspendUserMqRequest>(base.ExecuteMessage);
             mqServer.RegisterHandler<BrowserExceptionRequest>(base.ExecuteMessage);
+            mqServer.RegisterHandler<SaveUserGroupMqRequest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<GetImageFtpRequest>(base.ExecuteMessage, 3);
 
             mqServer.RegisterHandler<SMSSentRequest>(base.ExecuteMessage);
