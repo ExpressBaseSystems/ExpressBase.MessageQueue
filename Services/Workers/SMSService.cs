@@ -7,6 +7,7 @@ using RabbitMQ.Client.Framing.Impl;
 using ServiceStack;
 using ServiceStack.Messaging;
 using System;
+using System.Collections.Generic;
 using System.Data.Common;
 
 namespace ExpressBase.MessageQueue.MQServices
@@ -18,29 +19,32 @@ namespace ExpressBase.MessageQueue.MQServices
         {
         }
 
-        public string Post(SMSSentRequest req)
+        public void Post(SMSSentRequest req)
         {
             this.EbConnectionFactory = new EbConnectionFactory(req.SolnId, this.Redis);
-
-            var MsgStatus = this.EbConnectionFactory.SMSConnection.SendSMS(req.To, req.Body);
+            Dictionary<string, string> MsgStatus = this.EbConnectionFactory.SMSConnection.SendSMS(req.To, req.Body);
 
             SMSStatusLogMqRequest logMqRequest = new SMSStatusLogMqRequest
-            { SMSSentStatus = new SMSSentStatus() };
-
-            foreach (var Info in MsgStatus)
             {
-                if (Info.Key == "To")
-                    logMqRequest.SMSSentStatus.To = Info.Value;
-                if (Info.Key == "From")
-                    logMqRequest.SMSSentStatus.From = Info.Value;
-                if (Info.Key == "Body")
-                    logMqRequest.SMSSentStatus.Body = Info.Value;
-                if (Info.Key == "Status")
-                    logMqRequest.SMSSentStatus.Status = Info.Value;
-                if (Info.Key == "Result")
-                    logMqRequest.SMSSentStatus.Result = Info.Value;
-                if (Info.Key == "ConId")
-                    logMqRequest.SMSSentStatus.ConId = int.Parse(Info.Value);
+                SMSSentStatus = new SMSSentStatus()
+            };
+            if (!(MsgStatus is null))
+            {
+                foreach (var Info in MsgStatus)
+                {
+                    if (Info.Key == "To")
+                        logMqRequest.SMSSentStatus.To = Info.Value;
+                    if (Info.Key == "From")
+                        logMqRequest.SMSSentStatus.From = Info.Value;
+                    if (Info.Key == "Body")
+                        logMqRequest.SMSSentStatus.Body = Info.Value;
+                    if (Info.Key == "Status")
+                        logMqRequest.SMSSentStatus.Status = Info.Value;
+                    if (Info.Key == "Result")
+                        logMqRequest.SMSSentStatus.Result = Info.Value;
+                    if (Info.Key == "ConId")
+                        logMqRequest.SMSSentStatus.ConId = int.Parse(Info.Value);
+                }
             }
             logMqRequest.UserId = req.UserId;
             logMqRequest.SolnId = req.SolnId;
@@ -48,8 +52,6 @@ namespace ExpressBase.MessageQueue.MQServices
             logMqRequest.MetaData = JsonConvert.SerializeObject(req.Params);
             logMqRequest.RetryOf = req.RetryOf;
             SaveSMSLogs(logMqRequest);
-
-            return null;
         }
 
         public void SaveSMSLogs(SMSStatusLogMqRequest request)
