@@ -1,67 +1,64 @@
-﻿using ExpressBase.Common.Data;
+﻿using ExpressBase.Common.Constants;
+using ExpressBase.Common.Data;
 using ExpressBase.Common.Messaging;
 using ExpressBase.Common.Structures;
 using ExpressBase.Objects.Services;
 using ExpressBase.Objects.ServiceStack_Artifacts;
 using Newtonsoft.Json;
-using RabbitMQ.Client.Framing.Impl;
 using ServiceStack;
-using ServiceStack.Messaging;
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
+using System.Linq;
+using System.Threading.Tasks;
 
-namespace ExpressBase.MessageQueue.MQServices
+namespace ExpressBase.MessageQueue.Services.Workers
 {
+
     [Restrict(InternalOnly = true)]
-    public class SMSServiceInternal : EbMqBaseService
+    public class EmailInternalService : EbMqBaseService
     {
-        public SMSServiceInternal(IMessageProducer _mqp) : base(_mqp)
-        {
-        }
+        public EmailInternalService() : base() { }
 
-        public void Post(SMSSentRequest req)
+        public void Post(EmailServicesRequest request)
         {
-            this.EbConnectionFactory = new EbConnectionFactory(req.SolnId, this.Redis);
-            Dictionary<string, string> MsgStatus = this.EbConnectionFactory.SMSConnection.SendSMS(req.To, req.Body);
-
-            SMSStatusLogMqRequest logMqRequest = new SMSStatusLogMqRequest
+            SentStatus _sentStatus;
+            if (request.SolnId == CoreConstants.EXPRESSBASE)
             {
-                SentStatus = new SentStatus()
-            };
-            if (!(MsgStatus is null))
+                _sentStatus = this.InfraConnectionFactory.EmailConnection.Send(request.To, request.Subject, request.Message, request.Cc, request.Bcc, request.AttachmentReport, request.AttachmentName, request.ReplyTo);
+            }
+            else
             {
-                foreach (var Info in MsgStatus)
+                base.EbConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
+                if (this.EbConnectionFactory.EmailConnection != null)
                 {
-                    if (Info.Key == "To")
-                        logMqRequest.SentStatus.To = Info.Value;
-                    if (Info.Key == "From")
-                        logMqRequest.SentStatus.From = Info.Value;
-                    if (Info.Key == "Body")
-                        logMqRequest.SentStatus.Body = Info.Value;
-                    if (Info.Key == "Status")
-                        logMqRequest.SentStatus.Status = Info.Value;
-                    if (Info.Key == "Result")
-                        logMqRequest.SentStatus.Result = Info.Value;
-                    if (Info.Key == "ConId")
-                        logMqRequest.SentStatus.ConId = int.Parse(Info.Value);
+                    _sentStatus = this.EbConnectionFactory.EmailConnection.Send(request.To, request.Subject, request.Message, request.Cc, request.Bcc, request.AttachmentReport, request.AttachmentName, request.ReplyTo);
+                    Console.WriteLine("Inside EmailService/EmailServiceInternal in SS \n After Email \nSend To:" + request.To);
+                }
+                else
+                {
+                    throw new Exception("Email Connection not set for " + request.SolnId);
                 }
             }
-            logMqRequest.UserId = req.UserId;
-            logMqRequest.SolnId = req.SolnId;
-            logMqRequest.RefId = req.RefId;
-            logMqRequest.MetaData = JsonConvert.SerializeObject(req.Params);
-            logMqRequest.RetryOf = req.RetryOf;
-            SaveSMSLogs(logMqRequest);
-        }
+            EmailStatusLogMqRequest logMqRequest = new EmailStatusLogMqRequest
+            {
+                SentStatus = _sentStatus
+            }; 
 
-        public void SaveSMSLogs(SMSStatusLogMqRequest request)
+            logMqRequest.UserId = request.UserId;
+            logMqRequest.SolnId = request.SolnId;
+            logMqRequest.RefId = request.RefId;
+            logMqRequest.MetaData = JsonConvert.SerializeObject(request.Params);
+            logMqRequest.RetryOf = request.RetryOf;
+            SaveEmailLogs(logMqRequest);
+        }
+        public void SaveEmailLogs(EmailStatusLogMqRequest request)
         {
             EbConnectionFactory connectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
             try
             {
 
-                string sql = @"INSERT INTO eb_sms_logs
+                string sql = @"INSERT INTO eb_email_logs
                                 (send_to, send_from, message_body, status, result, refid, metadata, retryof, con_id, eb_created_by, eb_created_at)
                             VALUES
                                 (@to, @from, @message_body, @status, @result, @refid, @metadata, @retryof, @con_id, @user_id, NOW()) RETURNING id;";
@@ -83,8 +80,9 @@ namespace ExpressBase.MessageQueue.MQServices
             }
             catch (Exception ex)
             {
-                throw new Exception("Exception in Sms log  Save : " + ex.Message);
+                throw new Exception("Exception in Email log  Save : " + ex.Message);
             }
         }
+
     }
 }

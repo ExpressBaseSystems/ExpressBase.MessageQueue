@@ -155,7 +155,7 @@ namespace ExpressBase.MessageQueue
             mqServer.RegisterHandler<BrowserExceptionRequest>(base.ExecuteMessage);
             mqServer.RegisterHandler<SaveUserGroupMqRequest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<GetImageFtpRequest>(base.ExecuteMessage, 3);
-
+            mqServer.RegisterHandler<EmailServicesRequest>(base.ExecuteMessage);
             mqServer.RegisterHandler<SMSSentRequest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<SMSStatusLogMqRequest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<SlackPostMqRequest>(base.ExecuteMessage);
