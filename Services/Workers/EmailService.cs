@@ -1,4 +1,5 @@
-﻿using ExpressBase.Common.Constants;
+﻿using ExpressBase.Common;
+using ExpressBase.Common.Constants;
 using ExpressBase.Common.Data;
 using ExpressBase.Common.Messaging;
 using ExpressBase.Common.Structures;
@@ -43,7 +44,7 @@ namespace ExpressBase.MessageQueue.Services.Workers
             EmailStatusLogMqRequest logMqRequest = new EmailStatusLogMqRequest
             {
                 SentStatus = _sentStatus
-            }; 
+            };
 
             logMqRequest.UserId = request.UserId;
             logMqRequest.SolnId = request.SolnId;
@@ -55,13 +56,13 @@ namespace ExpressBase.MessageQueue.Services.Workers
         public void SaveEmailLogs(EmailStatusLogMqRequest request)
         {
             EbConnectionFactory connectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
+            string recepients = JsonConvert.SerializeObject(request.SentStatus.Recepients);
             try
             {
-
                 string sql = @"INSERT INTO eb_email_logs
-                                (send_to, send_from, message_body, status, result, refid, metadata, retryof, con_id, eb_created_by, eb_created_at)
+                                (send_to, send_from, message_body, status, result, refid, metadata, retryof, con_id, attachmentname, subject, recepients, eb_created_by, eb_created_at)
                             VALUES
-                                (@to, @from, @message_body, @status, @result, @refid, @metadata, @retryof, @con_id, @user_id, NOW()) RETURNING id;";
+                                (@to, @from, @message_body, @status, @result, @refid, @metadata, @retryof, @con_id, @attachmentname, @subject, @recepients, @user_id, NOW()) RETURNING id;";
 
                 DbParameter[] parameters =
                         {
@@ -74,7 +75,10 @@ namespace ExpressBase.MessageQueue.Services.Workers
                         connectionFactory.DataDB.GetNewParameter("metadata", EbDbTypes.Json, request.MetaData),
                         connectionFactory.DataDB.GetNewParameter("retryof", EbDbTypes.Int32, request.RetryOf),
                         connectionFactory.DataDB.GetNewParameter("con_id", EbDbTypes.Int32, request.SentStatus.ConId),
-                        connectionFactory.DataDB.GetNewParameter("user_id",EbDbTypes.Int32, request.UserId)
+                        connectionFactory.DataDB.GetNewParameter("user_id",EbDbTypes.Int32, request.UserId),
+                        connectionFactory.DataDB.GetNewParameter("attachmentname", EbDbTypes.String, string.IsNullOrEmpty(request.SentStatus.AttachmentName)?string.Empty:request.SentStatus.AttachmentName),
+                        connectionFactory.DataDB.GetNewParameter("subject", EbDbTypes.String, string.IsNullOrEmpty(request.SentStatus.Subject)?string.Empty:request.SentStatus.Subject),
+                        connectionFactory.DataDB.GetNewParameter("recepients", EbDbTypes.String, recepients)
                         };
                 var iCount = connectionFactory.DataDB.DoQuery(sql, parameters);
             }
