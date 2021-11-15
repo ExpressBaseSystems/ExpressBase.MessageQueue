@@ -78,7 +78,7 @@ namespace ExpressBase.MessageQueue.Services.Workers
                         connectionFactory.DataDB.GetNewParameter("user_id",EbDbTypes.Int32, request.UserId),
                         connectionFactory.DataDB.GetNewParameter("attachmentname", EbDbTypes.String, string.IsNullOrEmpty(request.SentStatus.AttachmentName)?string.Empty:request.SentStatus.AttachmentName),
                         connectionFactory.DataDB.GetNewParameter("subject", EbDbTypes.String, string.IsNullOrEmpty(request.SentStatus.Subject)?string.Empty:request.SentStatus.Subject),
-                        connectionFactory.DataDB.GetNewParameter("recepients", EbDbTypes.String, recepients)
+                        connectionFactory.DataDB.GetNewParameter("recepients", EbDbTypes.Json, recepients)
                         };
                 var iCount = connectionFactory.DataDB.DoQuery(sql, parameters);
             }
