@@ -61,10 +61,10 @@ namespace ExpressBase.MessageQueue.MQServices
             try
             {
 
-                string sql = @"INSERT INTO eb_sms_logs
+                string sql = $@"INSERT INTO eb_sms_logs
                                 (send_to, send_from, message_body, status, result, refid, metadata, retryof, con_id, eb_created_by, eb_created_at)
                             VALUES
-                                (@to, @from, @message_body, @status, @result, @refid, @metadata, @retryof, @con_id, @user_id, NOW()) RETURNING id;";
+                                (@to, @from, @message_body, @status, @result, @refid, @metadata, @retryof, @con_id, @user_id, {connectionFactory.DataDB.EB_CURRENT_TIMESTAMP}) RETURNING id;";
 
                 DbParameter[] parameters =
                         {

@@ -59,10 +59,10 @@ namespace ExpressBase.MessageQueue.Services.Workers
             string recepients = JsonConvert.SerializeObject(request.SentStatus.Recepients);
             try
             {
-                string sql = @"INSERT INTO eb_email_logs
+                string sql = $@"INSERT INTO eb_email_logs
                                 (send_to, send_from, message_body, status, result, refid, metadata, retryof, con_id, attachmentname, subject, recepients, eb_created_by, eb_created_at)
                             VALUES
-                                (@to, @from, @message_body, @status, @result, @refid, @metadata, @retryof, @con_id, @attachmentname, @subject, @recepients, @user_id, NOW()) RETURNING id;";
+                                (@to, @from, @message_body, @status, @result, @refid, @metadata, @retryof, @con_id, @attachmentname, @subject, @recepients, @user_id, {connectionFactory.DataDB.EB_CURRENT_TIMESTAMP}) RETURNING id;";
 
                 DbParameter[] parameters =
                         {
