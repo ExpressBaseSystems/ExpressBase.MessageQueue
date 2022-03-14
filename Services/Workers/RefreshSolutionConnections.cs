@@ -140,6 +140,22 @@ namespace ExpressBase.MessageQueue.MQServices
                                 else if ((ConPreferences)Convert.ToInt32(dr["preference"]) == ConPreferences.FALLBACK)
                                     cons.EmailConfigs.FallBack = temp;
                             }
+                            else if ((dr["con_type"].ToString() == EbConnectionTypes.IMAP.ToString()))
+                            {
+                                if (cons.EmailConfigs == null)
+                                {
+                                    cons.EmailConfigs = new EmailConfigCollection();
+                                }
+                                cons.EmailConfigs?.ImapConfigs.Add(EbSerializers.Json_Deserialize<EbEmailConfig>(dr["con_obj"].ToString()));
+                            }
+                            else if ((dr["con_type"].ToString() == EbConnectionTypes.POP3.ToString()))
+                            {
+                                if (cons.EmailConfigs == null)
+                                {
+                                    cons.EmailConfigs = new EmailConfigCollection();
+                                }
+                                cons.EmailConfigs?.Pop3Configs.Add(EbSerializers.Json_Deserialize<EbEmailConfig>(dr["con_obj"].ToString()));
+                            }
                             else if (dr["con_type"].ToString() == EbConnectionTypes.SMS.ToString())
                             {
                                 if (cons.SMSConfigs == null)
