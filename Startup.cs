@@ -107,19 +107,10 @@ namespace ExpressBase.MessageQueue
 
             RedisClient client = null;
 
-            //if (env == "Staging")
-            //{
-            //    container.Register<IRedisClientsManager>(c => new RedisManagerPool(redisServer));
-            //    client = (container.Resolve<IRedisClientsManager>() as RedisManagerPool).GetClient() as RedisClient;
-            //}
-            //else
-            //{
-                var redisConnectionString = string.Format("redis://{0}@{1}:{2}", redisPassword, redisServer, redisPort);
-                container.Register<IRedisClientsManager>(c => new RedisManagerPool(redisConnectionString));
-                client = (container.Resolve<IRedisClientsManager>() as RedisManagerPool).GetClient() as RedisClient;
-            //}
+            string redisConnectionString = string.Format("redis://{0}@{1}:{2}", redisPassword, redisServer, redisPort);
+            container.Register<IRedisClientsManager>(c => new RedisManagerPool(redisConnectionString));
+            client = (container.Resolve<IRedisClientsManager>() as RedisManagerPool).GetClient() as RedisClient;
 
-            //Setting Assembly version in Redis
             AssemblyName assembly = Assembly.GetExecutingAssembly().GetName();
             String version = assembly.Name.ToString() + " - " + assembly.Version.ToString();
             client.Set("MQAssembly", version);
@@ -129,6 +120,8 @@ namespace ExpressBase.MessageQueue
             container.Register<IEbServerEventClient>(c => new EbServerEventClient()).ReusedWithin(ReuseScope.Request);
             container.Register<IServiceClient>(c => new JsonServiceClient(Environment.GetEnvironmentVariable(EnvironmentConstants.EB_SERVICESTACK_EXT_URL))).ReusedWithin(ReuseScope.Request);
             container.Register<IEbConnectionFactory>(c => new EbConnectionFactory(c)).ReusedWithin(ReuseScope.Request);
+            container.Register<IEbStaticFileClient>(c => new EbStaticFileClient()).ReusedWithin(ReuseScope.Request);
+
 
             RabbitMqMessageFactory rabitFactory = new RabbitMqMessageFactory();
             rabitFactory.ConnectionFactory.UserName = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_RABBIT_USER);
@@ -157,6 +150,7 @@ namespace ExpressBase.MessageQueue
             //mqServer.RegisterHandler<GetImageFtpRequest>(base.ExecuteMessage, 3);
             mqServer.RegisterHandler<EmailServicesRequest>(base.ExecuteMessage);
             mqServer.RegisterHandler<SMSSentRequest>(base.ExecuteMessage);
+            mqServer.RegisterHandler<ApiMqRequest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<SMSStatusLogMqRequest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<SlackPostMqRequest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<SlackAuthMqRequest>(base.ExecuteMessage);
