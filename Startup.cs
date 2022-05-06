@@ -154,6 +154,7 @@ namespace ExpressBase.MessageQueue
             //mqServer.RegisterHandler<SMSStatusLogMqRequest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<SlackPostMqRequest>(base.ExecuteMessage);
             //mqServer.RegisterHandler<SlackAuthMqRequest>(base.ExecuteMessage);
+            mqServer.RegisterHandler<ReportRenderMultipleMQRequest>(base.ExecuteMessage);
 
             mqServer.Start();
 
