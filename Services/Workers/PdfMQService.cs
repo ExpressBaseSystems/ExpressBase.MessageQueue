@@ -3,6 +3,7 @@ using ExpressBase.Common.Constants;
 using ExpressBase.Common.Data;
 using ExpressBase.Common.ServerEvents_Artifacts;
 using ExpressBase.Common.ServiceClients;
+using ExpressBase.Common.Singletons;
 using ExpressBase.Objects;
 using ExpressBase.Objects.Helpers;
 using ExpressBase.Objects.Services;
@@ -60,6 +61,19 @@ namespace ExpressBase.MessageQueue.Services.Workers
             this.FileClient.BearerToken = authResponse?.BearerToken;
             this.FileClient.RefreshToken = authResponse?.RefreshToken;
 
+            List<EbObjectWrapper> resultlist = EbObjectsHelper.GetParticularVersion(this.EbConnectionFactory.ObjectsDB, request.RefId);
+            EbReport ReportObject= EbSerializers.Json_Deserialize<EbReport>(resultlist[0].Json);
+
+            ReportObject.ObjectsDB = this.EbConnectionFactory.ObjectsDB;
+            ReportObject.Redis = this.Redis;
+            ReportObject.FileClient = this.FileClient;
+            ReportObject.Solution = GetSolutionObject(request.SolnId);
+            ReportObject.ReadingUser = GetUserObject(request.ReadingUserAuthId);
+            ReportObject.RenderingUser = GetUserObject(request.RenderingUserAuthId);
+
+            ReportObject.CultureInfo = CultureHelper.GetSerializedCultureInfo(ReportObject.ReadingUser?.Preference.Locale ?? "en-US").GetCultureInfo();
+            ReportObject.GetWatermarkImages();
+
             try
             {
                 byte[] encodedDataAsBytes = System.Convert.FromBase64String(request.Params);
@@ -78,25 +92,11 @@ namespace ExpressBase.MessageQueue.Services.Workers
                                 new Param { Name = "id", Value = val, Type = "7" }
                             };
 
-                            List<EbObjectWrapper> resultlist = EbObjectsHelper.GetParticularVersion(this.EbConnectionFactory.ObjectsDB, request.RefId);
-                            Report = EbSerializers.Json_Deserialize<EbReport>(resultlist[0].Json);
+                            this.Report = ReportObject;
 
                             if (Report != null)
-                            {
-
-                                Report.ObjectsDB = this.EbConnectionFactory.ObjectsDB;
-                                Report.Redis = this.Redis;
-                                Report.FileClient = this.FileClient;
-                                Report.Solution = GetSolutionObject(request.SolnId);
-                                Report.ReadingUser = GetUserObject(request.ReadingUserAuthId);
-                                Report.RenderingUser = GetUserObject(request.RenderingUserAuthId);
-                                //Report.ExecuteRendering(request.BToken, request.RToken, this.Document, this.Ms1, _newParamlist, this.EbConnectionFactory);
-
-
-                                Report.InitializeReportObects(request.BToken, request.RToken);
-
+                            { 
                                 InitializePdfObjects();
-
                                 Report.Doc.NewPage();
                                 Report.GetData4Pdf(_newParamlist, EbConnectionFactory);
 
