@@ -62,7 +62,7 @@ namespace ExpressBase.MessageQueue.Services.Workers
             this.FileClient.RefreshToken = authResponse?.RefreshToken;
 
             List<EbObjectWrapper> resultlist = EbObjectsHelper.GetParticularVersion(this.EbConnectionFactory.ObjectsDB, request.RefId);
-            EbReport ReportObject= EbSerializers.Json_Deserialize<EbReport>(resultlist[0].Json);
+            EbReport ReportObject = EbSerializers.Json_Deserialize<EbReport>(resultlist[0].Json);
 
             ReportObject.ObjectsDB = this.EbConnectionFactory.ObjectsDB;
             ReportObject.Redis = this.Redis;
@@ -82,20 +82,21 @@ namespace ExpressBase.MessageQueue.Services.Workers
                 List<Param> _paramlist = (returnValue == null) ? null : JsonConvert.DeserializeObject<List<Param>>(returnValue);
                 if (_paramlist != null)
                 {
-                    foreach (Param p in _paramlist)
+                    for (int i = 0; i < _paramlist.Count; i++)
                     {
-                        string[] values = p.Value.Split(',');
-                        foreach (string val in values)
+                        string[] values = _paramlist[i].Value.Split(',');
+
+                        for (int j = 0; j < values.Length; j++)
                         {
                             List<Param> _newParamlist = new List<Param>
                             {
-                                new Param { Name = "id", Value = val, Type = "7" }
+                                new Param { Name = "id", Value = values[j], Type = "7" }
                             };
 
                             this.Report = ReportObject;
 
                             if (Report != null)
-                            { 
+                            {
                                 InitializePdfObjects();
                                 Report.Doc.NewPage();
                                 Report.GetData4Pdf(_newParamlist, EbConnectionFactory);
