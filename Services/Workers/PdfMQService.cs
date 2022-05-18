@@ -64,6 +64,9 @@ namespace ExpressBase.MessageQueue.Services.Workers
             List<EbObjectWrapper> resultlist = EbObjectsHelper.GetParticularVersion(this.EbConnectionFactory.ObjectsDB, request.RefId);
             EbReport ReportObject = EbSerializers.Json_Deserialize<EbReport>(resultlist[0].Json);
 
+            Displayname = Regex.Replace(((Displayname == "") ? ReportObject.DisplayName : Displayname), @"\s+", "");
+            int id = new DownloadsPageHelper().InsertDownloadFileEntry(this.EbConnectionFactory.DataDB, Displayname + ".pdf", request.UserId);
+
             ReportObject.ObjectsDB = this.EbConnectionFactory.ObjectsDB;
             ReportObject.Redis = this.Redis;
             ReportObject.FileClient = this.FileClient;
@@ -124,14 +127,14 @@ namespace ExpressBase.MessageQueue.Services.Workers
                 Report.DataSet = null;
             }
 
-            Displayname = Regex.Replace(((Displayname == "") ? Report.DisplayName : Displayname), @"\s+", "");
-
             Ms1.Position = 0;
 
             string uid = request.RefId + request.UserId + request.SubscriptionId;
             byte[] compressedData = Compress(Ms1.ToArray());
 
-            this.Redis.Set("PdfReport" + uid, compressedData, DateTime.Now.AddMinutes(15));
+            //this.Redis.Set("PdfReport" + uid, compressedData, DateTime.Now.AddMinutes(15));
+            new DownloadsPageHelper().SaveDownloadFileBytea(this.EbConnectionFactory.DataDB, compressedData, id);
+
 
             this.ServerEventClient.BearerToken = authResponse?.BearerToken;
             this.ServerEventClient.RefreshToken = authResponse?.RefreshToken;
@@ -140,13 +143,14 @@ namespace ExpressBase.MessageQueue.Services.Workers
             Console.WriteLine("Calling NotifySubscriptionRequest to subsc.id :" + request.SubscriptionId);
             this.ServerEventClient.Post<NotifyResponse>(new NotifySubscriptionRequest
             {
-                Msg = "/DV/GetPdf?refid=" + uid + "&filename=" + Displayname + ".pdf",
+                Msg = "/DV/GetPdf?id=" + id,
                 Selector = StaticFileConstants.PDFDOWNLOADSUCCESS,
                 ToSubscriptionId = request.SubscriptionId
             });
 
             return new ReportRenderResponse();
         }
+
         public void InitializePdfObjects()
         {
             float _width = Report.WidthPt - Report.Margin.Left;// - Report.Margin.Right;
