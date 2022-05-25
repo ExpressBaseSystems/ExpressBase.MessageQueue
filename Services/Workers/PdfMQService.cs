@@ -44,8 +44,8 @@ namespace ExpressBase.MessageQueue.Services.Workers
             this.Ms1 = new MemoryStream();
             this.EbConnectionFactory = new EbConnectionFactory(request.SolnId, this.Redis);
 
-            JsonServiceClient authClient = this.ServiceStackClient;
-            MyAuthenticateResponse authResponse = authClient.Get<MyAuthenticateResponse>(new Authenticate
+            JsonServiceClient serviceClient = this.ServiceStackClient;
+            MyAuthenticateResponse authResponse = serviceClient.Get<MyAuthenticateResponse>(new Authenticate
             {
                 provider = CredentialsAuthProvider.Name,
                 UserName = GetUserObject(request.ReadingUserAuthId)?.Email,
