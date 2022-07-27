@@ -55,6 +55,8 @@ namespace ExpressBase.MessageQueue.Services.Workers
             {
                 IEbConnectionFactory factory = new EbConnectionFactory(request.SolnId, Redis);
                 User NewUser = User.GetUserObject(factory.DataDB, OldUser.UserId, Wc, null, null);
+                if (NewUser == null)
+                    return;
                 OldUser.Permissions = NewUser.Permissions;
                 OldUser.Roles = NewUser.Roles;
                 OldUser.RoleIds = NewUser.RoleIds;
@@ -238,6 +240,8 @@ namespace ExpressBase.MessageQueue.Services.Workers
         {
             IEbConnectionFactory factory = new EbConnectionFactory(SolnId, Redis);
             User user = User.GetUserObject(factory.DataDB, int.Parse(UserId), WC, null, null);
+            if (user == null)
+                return null;
             user_redis.Permissions = user.Permissions;
             user_redis.Roles = user.Roles;
             user_redis.RoleIds = user.RoleIds;
