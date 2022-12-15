@@ -139,11 +139,17 @@ namespace ExpressBase.MessageQueue.Services.Workers
                 {
                     if (!String.IsNullOrEmpty(request.UserId.ToString()))
                     {
-                        User user_redis = null;
-                        user_redis = this.Redis.Get<User>(_userauth_id);
+                        User user_redis = this.Redis.Get<User>(_userauth_id);
                         if (user_redis != null)
                         {
                             user_redis = UpdateRedisUserObject(user_redis, request.SolnId, request.UserId.ToString(), request.WhichConsole, _userauth_id);
+                        }
+
+                        string _mc_userauth_id = request.SolnId + ":" + request.UserId + ":mc";
+                        User mc_user_redis = this.Redis.Get<User>(_mc_userauth_id);
+                        if (mc_user_redis != null)
+                        {
+                            mc_user_redis = UpdateRedisUserObject(mc_user_redis, request.SolnId, request.UserId.ToString(), "mc", _mc_userauth_id);
                         }
                     }
                     try
