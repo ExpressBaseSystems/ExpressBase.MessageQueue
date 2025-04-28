@@ -19,6 +19,7 @@ using ServiceStack.Messaging;
 using ServiceStack.RabbitMq;
 using ServiceStack.Redis;
 using System;
+using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
 using System.Reflection;
 //using Quartz;
@@ -110,6 +111,11 @@ namespace ExpressBase.MessageQueue
             string redisConnectionString = string.Format("redis://{0}@{1}:{2}", redisPassword, redisServer, redisPort);
             container.Register<IRedisClientsManager>(c => new RedisManagerPool(redisConnectionString));
             client = (container.Resolve<IRedisClientsManager>() as RedisManagerPool).GetClient() as RedisClient;
+
+            var listRWRedis = new List<string>() { redisConnectionString };
+            var listRORedis = new List<string>() { redisConnectionString.Replace("-master", "-replicas") };
+            PooledRedisClientManager pooledRedisManager = new PooledRedisClientManager(listRWRedis, listRORedis);
+            container.Register<PooledRedisClientManager>(c => pooledRedisManager);
 
             AssemblyName assembly = Assembly.GetExecutingAssembly().GetName();
             String version = assembly.Name.ToString() + " - " + assembly.Version.ToString();

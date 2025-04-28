@@ -14,6 +14,7 @@ using Newtonsoft.Json;
 using ServiceStack;
 using ServiceStack.Auth;
 using ServiceStack.Messaging;
+using ServiceStack.Redis;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -26,7 +27,7 @@ namespace ExpressBase.MessageQueue.Services.Workers
     [Restrict(InternalOnly = true)]
     public class PdfMQService : EbMqBaseService
     {
-        public PdfMQService(IEbConnectionFactory _dbf, IEbStaticFileClient _sfc, IMessageProducer _mqp, IMessageQueueClient _mqc, IServiceClient _ssclient, IEbServerEventClient _sec) : base(_dbf, _sfc, _mqp, _mqc, _ssclient, _sec) { }
+        public PdfMQService(IEbConnectionFactory _dbf, IEbStaticFileClient _sfc, IMessageProducer _mqp, IMessageQueueClient _mqc, IServiceClient _ssclient, IEbServerEventClient _sec, PooledRedisClientManager pooledRedisManager) : base(_dbf, _sfc, _mqp, _mqc, _ssclient, _sec, pooledRedisManager) { }
 
         public MemoryStream Ms1 = null;
 
@@ -34,7 +35,7 @@ namespace ExpressBase.MessageQueue.Services.Workers
 
         public PdfWriter Writer = null;
 
-        public Document Document = null;
+        public Document MainDocument = null;
 
         public PdfContentByte Canvas = null;
 
@@ -61,128 +62,134 @@ namespace ExpressBase.MessageQueue.Services.Workers
             this.FileClient.BearerToken = authResponse?.BearerToken;
             this.FileClient.RefreshToken = authResponse?.RefreshToken;
 
-            List<EbObjectWrapper> resultlist = EbObjectsHelper.GetParticularVersion(this.EbConnectionFactory.ObjectsDB, request.RefId);
-            EbReport ReportObject = EbSerializers.Json_Deserialize<EbReport>(resultlist[0].Json);
+            EbReport reportObject = EbFormHelper.GetEbObject<EbReport>(request.RefId, serviceClient, this.Redis, this);
 
-            Displayname = Regex.Replace(((Displayname == "") ? ReportObject.DisplayName : Displayname), @"\s+", "");
+            Displayname = Regex.Replace(((Displayname == "") ? reportObject.DisplayName : Displayname), @"\s+", "");
             int id = new DownloadsPageHelper().InsertDownloadFileEntry(this.EbConnectionFactory.DataDB, Displayname + ".pdf", request.UserId);
 
-            ReportObject.ObjectsDB = this.EbConnectionFactory.ObjectsDB;
-            ReportObject.Redis = this.Redis;
-            ReportObject.FileClient = this.FileClient;
-            ReportObject.Solution = GetSolutionObject(request.SolnId);
-            ReportObject.ReadingUser = GetUserObject(request.ReadingUserAuthId);
-            ReportObject.RenderingUser = GetUserObject(request.RenderingUserAuthId);
+            reportObject.pooledRedisManager = this.PooledRedisManager;
+            reportObject.ObjectsDB = this.EbConnectionFactory.ObjectsDB;
+            reportObject.Redis = this.Redis;
+            reportObject.FileClient = this.FileClient;
+            reportObject.Solution = GetSolutionObject(request.SolnId);
+            reportObject.ReadingUser = GetUserObject(request.ReadingUserAuthId);
+            reportObject.RenderingUser = GetUserObject(request.RenderingUserAuthId);
 
-            ReportObject.CultureInfo = CultureHelper.GetSerializedCultureInfo(ReportObject.ReadingUser?.Preference.Locale ?? "en-US").GetCultureInfo();
-            ReportObject.GetWatermarkImages();
+            reportObject.CultureInfo = CultureHelper.GetSerializedCultureInfo(reportObject.ReadingUser?.Preference.Locale ?? "en-US").GetCultureInfo();
+            reportObject.GetWatermarkImages();
 
-            try
+
+            if (request.Params != null)
             {
-                byte[] encodedDataAsBytes = System.Convert.FromBase64String(request.Params);
-                string returnValue = System.Text.ASCIIEncoding.ASCII.GetString(encodedDataAsBytes);
-
-                List<Param> _paramlist = (returnValue == null) ? null : JsonConvert.DeserializeObject<List<Param>>(returnValue);
-                if (_paramlist != null)
+                try
                 {
-                    for (int i = 0; i < _paramlist.Count; i++)
+                    byte[] encodedDataAsBytes = System.Convert.FromBase64String(request.Params);
+                    string returnValue = System.Text.ASCIIEncoding.ASCII.GetString(encodedDataAsBytes);
+
+                    List<Param> _paramlist = (returnValue == null) ? null : JsonConvert.DeserializeObject<List<Param>>(returnValue);
+                    if (_paramlist != null)
                     {
-                        string[] values = _paramlist[i].Value.Split(',');
-
-                        for (int j = 0; j < values.Length; j++)
+                        for (int i = 0; i < _paramlist.Count; i++)
                         {
-                            List<Param> _newParamlist = new List<Param>
-                            {
-                                new Param { Name = "id", Value = values[j], Type = "7" }
-                            };
+                            string[] values = _paramlist[i].Value.Split(',');
+                            reportObject.CurrentReportPageNumber = 1;
 
-                            this.Report = ReportObject;
-
-                            if (Report != null)
+                            for (int j = 0; j < values.Length; j++)
                             {
-                                InitializePdfObjects();
-                                Report.Doc.NewPage();
+                                List<Param> _newParamlist = new List<Param> { new Param { Name = "id", Value = values[j], Type = "7" } };
+
+                                this.Report = reportObject;
+
+                                if (Report == null) continue;
+
                                 Report.GetData4Pdf(_newParamlist, EbConnectionFactory);
+                                InitializePdfObjects();
+
+                                if (!MainDocument.IsOpen())
+                                    MainDocument.Open();
+
+                                if (j > 0)
+                                {
+                                    reportObject.NextReport = true;
+                                    Report.AddNewPage();
+                                }
 
                                 if (Report.DataSet != null)
                                     Report.Draw();
                                 else
                                     throw new Exception();
+                                Report.Reset();
+
                             }
+
                         }
                     }
                 }
+                catch (Exception e)
+                {
+                    Console.WriteLine("Exception-reportService " + e.Message + e.StackTrace);
+                    Report.HandleExceptionPdf(e);
+                }
+
+                Report.IsRenderingComplete = true;
+                Report.Doc.AddTitle(Report.DocumentName);
+                Report.Writer.Close();
+                Report.Doc.Close();
+
+                Ms1.Position = 0;
+
+                string uid = request.RefId + request.UserId + request.SubscriptionId;
+                byte[] compressedData = Compress(Ms1.ToArray());
+
+                //this.Redis.Set("PdfReport" + uid, compressedData, DateTime.Now.AddMinutes(15));
+                new DownloadsPageHelper().SaveDownloadFileBytea(this.EbConnectionFactory.DataDB, compressedData, id);
+
+
+                this.ServerEventClient.BearerToken = authResponse?.BearerToken;
+                this.ServerEventClient.RefreshToken = authResponse?.RefreshToken;
+                this.ServerEventClient.RefreshTokenUri = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_GET_ACCESS_TOKEN_URL);
+
+                Console.WriteLine("Calling NotifySubscriptionRequest to subsc.id :" + request.SubscriptionId);
+                //this.ServerEventClient.Post<NotifyResponse>(new NotifySubscriptionRequest
+                //{
+                //    Msg = "/DV/GetPdf?id=" + id,
+                //    Selector = StaticFileConstants.PDFDOWNLOADSUCCESS,
+                //    ToSubscriptionId = request.SubscriptionId
+                //});
             }
-            catch (Exception e)
-            {
-                Console.WriteLine("Exception-reportService " + e.Message + e.StackTrace);
-                Report.HandleExceptionPdf(e);
-            }
-
-            Report.Doc.AddTitle(Report.DocumentName);
-            Report.Doc.Close();
-
-            if (Report.DataSourceRefId != string.Empty && Report.DataSet != null)
-            {
-                Report.DataSet.Tables.Clear();
-                Report.DataSet = null;
-            }
-
-            Ms1.Position = 0;
-
-            string uid = request.RefId + request.UserId + request.SubscriptionId;
-            byte[] compressedData = Compress(Ms1.ToArray());
-
-            //this.Redis.Set("PdfReport" + uid, compressedData, DateTime.Now.AddMinutes(15));
-            new DownloadsPageHelper().SaveDownloadFileBytea(this.EbConnectionFactory.DataDB, compressedData, id);
-
-
-            this.ServerEventClient.BearerToken = authResponse?.BearerToken;
-            this.ServerEventClient.RefreshToken = authResponse?.RefreshToken;
-            this.ServerEventClient.RefreshTokenUri = Environment.GetEnvironmentVariable(EnvironmentConstants.EB_GET_ACCESS_TOKEN_URL);
-
-            Console.WriteLine("Calling NotifySubscriptionRequest to subsc.id :" + request.SubscriptionId);
-            this.ServerEventClient.Post<NotifyResponse>(new NotifySubscriptionRequest
-            {
-                Msg = "/DV/GetPdf?id=" + id,
-                Selector = StaticFileConstants.PDFDOWNLOADSUCCESS,
-                ToSubscriptionId = request.SubscriptionId
-            });
-
             return new ReportRenderResponse();
         }
-
-        public void InitializePdfObjects()
+       
+         public void InitializePdfObjects()
         {
-            float _width = Report.WidthPt - Report.Margin.Left;// - Report.Margin.Right;
-            float _height = Report.HeightPt - Report.Margin.Top - Report.Margin.Bottom;
-            Report.HeightPt = _height;
-
-            Rectangle rec = new Rectangle(_width, _height);
-            if (this.Document == null)
+            if (this.MainDocument == null)
             {
+                float _width = Report.WidthPt - Report.Margin.Left;
+                float _height = Report.HeightPt - Report.Margin.Top - Report.Margin.Bottom;
+                Report.HeightPt = _height;
+
+                Rectangle rec = new Rectangle(_width, _height);
                 Report.Doc = new Document(rec);
                 Report.Doc.SetMargins(Report.Margin.Left, Report.Margin.Right, Report.Margin.Top, Report.Margin.Bottom);
                 Report.Writer = PdfWriter.GetInstance(Report.Doc, this.Ms1);
-                Report.Writer.Open();
-                Report.Doc.Open();
                 Report.Writer.PageEvent = new HeaderFooter(Report);
+                Report.Writer.Open();
                 Report.Writer.CloseStream = true;//important
                 Report.Canvas = Report.Writer.DirectContent;
-                Report.PageNumber = Report.Writer.PageNumber;
-                this.Document = Report.Doc;
+                Report.MasterPageNumber = Report.Writer.PageNumber;
+                this.MainDocument = Report.Doc;
                 this.Writer = Report.Writer;
                 this.Canvas = Report.Canvas;
             }
             else
             {
-                Report.Doc = this.Document;
+                Report.Doc = this.MainDocument;
                 Report.Writer = this.Writer;
-                Report.Canvas = this.Canvas;
-                Report.PageNumber = 1/*Report.Writer.PageNumber*/;
+                Report.Canvas = this.Canvas; 
+                Report.SerialNumber = 0;
+                Report.DrawDetailCompleted = false;
             }
         }
-
         public static byte[] Compress(byte[] data)
         {
             using (MemoryStream memory = new MemoryStream())
