@@ -102,14 +102,15 @@ namespace ExpressBase.MessageQueue.Services.Workers
 
                                 if (Report == null) continue;
 
+                                Report.Reset();
+
+                                Report.GetData4Pdf(_newParamlist, EbConnectionFactory);
+
                                 if (j > 0)
                                 {
                                     reportObject.NextReport = true;
                                     Report.AddNewPage();
-                                    Report.Reset();
                                 }
-
-                                Report.GetData4Pdf(_newParamlist, EbConnectionFactory);
                                 InitializePdfObjects();
 
                                 if (!MainDocument.IsOpen())
