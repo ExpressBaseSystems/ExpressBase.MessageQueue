@@ -135,8 +135,8 @@ namespace ExpressBase.MessageQueue.Services.Workers
 
                 Report.IsRenderingComplete = true;
                 Report.Doc.AddTitle(Report.DocumentName);
-                Report.Writer.Close();
                 Report.Doc.Close();
+                Report.Writer.Close();
 
                 Ms1.Position = 0;
 
